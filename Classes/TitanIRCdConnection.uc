@@ -1,11 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////////
-// filename:    UnrealIRCDConnection.uc
+// filename:    TitanIRCdConnection.uc
 // version:     100
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     The actual IRC server
 ///////////////////////////////////////////////////////////////////////////////
 
-class UnrealIRCDConnection extends UTelAdSEAccept config;
+class TitanIRCdConnection extends UTelAdSEAccept config;
 
 var string sNickname;
 var float fPingDelay;
@@ -28,11 +28,11 @@ state loggin_in {
     if (Caps(input[0]) == "USER") 
     {
       // login here
-      if (iVerbose > 1) Log("[D] UnrealIRCD got username: "$sUsername, 'UTelAdSE');
-      if (iVerbose > 1) Log("[D] UnrealIRCD got password: "$sPassword, 'UTelAdSE');
+      if (iVerbose > 1) Log("[D] TitanIRCd got username: "$sUsername, 'UTelAdSE');
+      if (iVerbose > 1) Log("[D] TitanIRCd got password: "$sPassword, 'UTelAdSE');
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
-        if (iVerbose > 0) Log("[~] UnrealIRCD login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
+        if (iVerbose > 0) Log("[~] TitanIRCd login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         SendLine("464 ERR_PASSWDMISMATCH");
         Close();
       }
@@ -56,12 +56,12 @@ state loggin_in {
         // succesfull login
         setTimer(fPingDelay, true);
         sNickname = sUsername; //FIXME: find free nick
-        if (iVerbose > 0) Log("[~] UnrealIRCD login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
+        if (iVerbose > 0) Log("[~] TitanIRCd login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         gotostate('logged_in'); 
-        IRCSend(":Welcome to UnrealIRCD"@sNickname, 001);
-        IRCSend(":Your host is "$sIP$":"$string(parent.listenport)$", running UnrealIRCD version"@UnrealIRCD(parent).IRCVERSION, 002);
+        IRCSend(":Welcome to TitanIRCd"@sNickname, 001);
+        IRCSend(":Your host is "$sIP$":"$string(parent.listenport)$", running TitanIRCd version"@TitanIRCd(parent).IRCVERSION, 002);
         IRCSend(":This server was created on FIXME", 003); //FIXME: create date
-        IRCSend("UTelAdSE/"$parent.VERSION$" UnrealIRCD/"$UnrealIRCD(parent).IRCVERSION$"", 004); //FIXME: version
+        IRCSend("UTelAdSE/"$parent.VERSION$" TitanIRCd/"$TitanIRCd(parent).IRCVERSION$"", 004); //FIXME: version
         // PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003
         // ommited: WALLCHOPS MAXBANS=0 NICKLEN=-1 TOPICLEN=0 CHANMODES= KNOCK MODES=4
         // #servername
@@ -184,7 +184,7 @@ function printMOTD()
 {
   IRCSend("- "$sIP@"Message of the Day", 375);
   IRCSend("- ,------------------------------------------------------------", 372);
-  IRCSend("- | "$Bold("Welcome to UnrealIRCD version "$UnrealIRCD(parent).IRCVERSION), 372);
+  IRCSend("- | "$Bold("Welcome to TitanIRCd version "$TitanIRCd(parent).IRCVERSION), 372);
   IRCSend("- | Running on "$Bold(Level.Game.GameReplicationInfo.ServerName), 372);
   IRCSend("- | by Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>", 372);
   IRCSend("- | The Drunk Snipers               http://www.drunksnipers.com", 372);

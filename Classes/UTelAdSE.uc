@@ -13,7 +13,6 @@ var string AppName;
 
 var config int ListenPort;
 var config int MaxConnections;
-var config array< class<UTelAdSEHelper> > TelnetHelperClasses;
 var array<UTelAdSEHelper> TelnetHelpers;
 var config bool CheckVersion;
 var config int iVerbose;
@@ -35,40 +34,40 @@ event PreBeginPlay()
     versioncheck.CheckVersion();
   }
   Super.PreBeginPlay();
-  LoadTelnetHelpers();
+  LoadTelnetHelpersEx();
+  //LoadTelnetHelpers();
   ConnectionCount = 0;
   BindPort( ListenPort );
 	Listen();
   if (iVerbose > 0) log("[~] "$AppName$" Listing on: "$ListenPort, 'UTelAdSE');
 }
 
-// load TelnetHelpers for builtins/short-keys
-function LoadTelnetHelpers()
+function LoadTelnetHelpersEx()
 {
-  local int i, j, cnt;
+  local int i, j;
+  local class<UTelAdSEHelper>	HelperClass;
+	local string HelperClassName, HelperClassDescription;
   local UTelAdSEHelper TH;
-  local class<UTelAdSEHelper> THC;
 
-	cnt = 0;
-	for (i=0; i<TelnetHelperClasses.Length; i++)
+  GetNextIntDesc("UTelAdSE.UTelAdSEHelper",0,HelperClassName,HelperClassDescription);
+	while (HelperClassName != "")
 	{
-		THC = TelnetHelperClasses[i];
-		// Skip invalid classes;
-		if (THC != None)
+    HelperClass = class<UTelAdSEHelper>(DynamicLoadObject(HelperClassName,Class'Class',true));
+    if (HelperClass != None)
 		{
-			// Make sure we dont have duplicate instance of the same class
+      // Make sure we dont have duplicate instance of the same class
 			for (j=0;j<TelnetHelpers.Length; j++)
 			{
-				if (TelnetHelpers[j].Class == THC)
+				if (TelnetHelpers[j].Class == HelperClass)
 				{
-					THC = None;
+					HelperClass = None;
 					break;
 				}
 			}
 			
-			if (THC != None)
+			if (HelperClass != None)
 			{
-				TH = new THC;
+				TH = new HelperClass;
 				if (TH != None)
 				{
 					if (TH.Init())
@@ -78,12 +77,14 @@ function LoadTelnetHelpers()
 					}
 					else
 					{
-						if (iVerbose > 0) Log("TelnetHelper:"@THC@"could not be initialized", 'UTelAdSE');
+						if (iVerbose > 0) Log("TelnetHelper:"@HelperClass@"could not be initialized", 'UTelAdSE');
 					}
 				}
 			}
-		}
-	}
+
+    }
+    GetNextIntDesc("UTelAdSE.UTelAdSEHelper",++i, HelperClassName, HelperClassDescription);
+  }
 }
 
 // new connection established
