@@ -155,7 +155,8 @@ function bool viewProfile(int index, UTelAdSEConnection connection)
 function execProfiles(array< string > args, UTelAdSEConnection connection)
 {
   local string cmd;
-  local int i, index;
+  local int i, j, index;
+  local bool bDelay;
 
   if (CanPerform(connection.Spectator, "Tg"))
 	{
@@ -185,7 +186,8 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
             cmd = class'wString'.static.trim(class'wArray'.static.join(args, " "));
             if (cmd != "")
             {
-              index = int(LadderRules.AllLadderProfiles.GetItem(LadderRules.AllLadderProfiles.FindTagId(cmd)));
+              index = LadderRules.AllLadderProfiles.FindTagId(cmd);
+              if (index > -1) index = int(LadderRules.AllLadderProfiles.GetItem(index));
             }
           }
         }
@@ -208,8 +210,67 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
         connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
       }
     }
+    else if (cmd == "switch")
+    {
+      if (CanPerform(connection.Spectator, "Ls"))
+    	{
+        index = -1;
+        j = 0;
+        for (i = 0; i < args.length; i++)
+        {
+          if (args[i] ~= "-matches")
+          {
+            ShiftArray(args);
+            j = int(ShiftArray(args));
+            i = 0;
+          }
+          if (args[i] ~= "-delay")
+          {
+            bDelay = true;
+            ShiftArray(args);
+            i = 0;
+          }
+        }
+        if (args.length > 0)
+        {
+          if (IsNumeric(args[0]))
+          {
+            index = int(args[0]);
+          }
+          else {
+            cmd = class'wString'.static.trim(class'wArray'.static.join(args, " "));
+            if (cmd != "")
+            {
+              index = LadderRules.AllLadderProfiles.FindTagId(cmd);
+              if (index > -1) index = int(LadderRules.AllLadderProfiles.GetItem(index));
+            }
+          }
+          if (Index > -1 && Index < LadderRules.LadderProfiles.Length)
+          {
+            if (bDelay)
+            {
+              LadderRules.WaitApplyProfile(index, j);
+              // TODO: connection.SendLine(msg_switch_delay);
+            }
+            else {
+              LadderRules.ApplyProfile(index, j);
+              // TODO: connection.SendLine(msg_switch);
+            }
+          }
+          else {
+            connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
+          }
+        }
+        else {
+          connection.SendLine(msg_usage@PREFIX_BUILTIN$"profiles <switch> [-matches #] [-delay] name|id");
+        }
+      }
+      else {
+        connection.SendLine(msg_noprivileges);
+      }
+    }
     else {
-      connection.SendLine(msg_usage@PREFIX_BUILTIN$"profiles <list> | <view> [name|id]");
+      connection.SendLine(msg_usage@PREFIX_BUILTIN$"profiles <list> | <view> [name|id] | <switch> [-matches #] [-delay] name|id");
     }
   }
   else {
@@ -247,13 +308,8 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
     if (commandline[0] == "profiles")
     {
       if (InStr("list", commandline[1]) == 0) AddArray(options, commandline[0]@"list");
-      if (InStr("edit", commandline[1]) == 0) AddArray(options, commandline[0]@"edit");
-      if (InStr("save", commandline[1]) == 0) AddArray(options, commandline[0]@"save");
-      if (InStr("cancel", commandline[1]) == 0) AddArray(options, commandline[0]@"cancel");
-      if (InStr("remove", commandline[1]) == 0) AddArray(options, commandline[0]@"remove");
-      if (InStr("load", commandline[1]) == 0) AddArray(options, commandline[0]@"load");
-      if (InStr("import", commandline[1]) == 0) AddArray(options, commandline[0]@"import");
-      if (InStr("export", commandline[1]) == 0) AddArray(options, commandline[0]@"export");
+      if (InStr("view", commandline[1]) == 0) AddArray(options, commandline[0]@"view");
+      if (InStr("switch", commandline[1]) == 0) AddArray(options, commandline[0]@"switch");
     }
   }
   return true;

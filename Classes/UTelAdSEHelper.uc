@@ -98,6 +98,7 @@ function bool CanPerform(playercontroller user, string privs)
 // funtion: checks if a string is a numeric representation
 function bool IsNumeric(string Param, optional bool bPositiveOnly)
 {
+  if (param == "") return false;
   return class'wMath'.static.IsInt(param, bPositiveOnly);
 }
 
