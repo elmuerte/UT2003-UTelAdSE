@@ -31,7 +31,7 @@ function string getPlayerHostByPRI(PlayerReplicationInfo PRI)
         IRCClient.IRCd.IRCUsers[i].OldName = PRI.PlayerName;
         old = IRCClient.IRCd.IRCUsers[i].Nickname;
         IRCClient.IRCd.IRCUsers[i].Nickname = IRCClient.IRCd.getNickName(IRCClient.IRCd.IRCUsers[i].PC.PlayerReplicationInfo.PlayerName, IRCClient.IRCd.IRCUsers[i].PC);
-        IRCClient.SendRaw(":"$old$" NICK "$IRCClient.IRCd.IRCUsers[i].Nickname);
+        if (IRCClient.isOnChannel(IRCClient.IRCd.sChatChannel)) IRCClient.SendRaw(":"$old$" NICK "$IRCClient.IRCd.IRCUsers[i].Nickname);
       }
       return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].username$"@"$IRCClient.IRCd.IRCUsers[i].Hostname;
     }
@@ -72,7 +72,7 @@ function TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type)
 	if (bMsgEnable)
   {
     if (PRI == PlayerReplicationInfo) return;
-    IRCClient.SendRaw(FormatMessage(PRI, S, Type));
+    if (IRCClient.isOnChannel(IRCClient.IRCd.sChatChannel)) IRCClient.SendRaw(FormatMessage(PRI, S, Type));
   }
 }
 

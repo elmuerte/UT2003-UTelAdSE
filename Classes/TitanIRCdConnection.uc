@@ -13,6 +13,8 @@ var string sQuitMsg;
 var TitanIRCd IRCd;
 var byte id;
 
+var array<string> Channels;
+
 event Accepted()
 {
   if (IRCd.IRCUsers.length == 0) IRCd.CreatePlayerList(); // may wanna fix this
@@ -94,10 +96,10 @@ state loggin_in {
         }
         Login();
         if (sUsername != sNickname) SendRaw(":"$sUsername$" NICK "$sNickname);
-        ircJoin(IRCd.sChatChannel);
+        //ircJoin(IRCd.sChatChannel);
         IRCd.AddUserPlayerList(sNickname, sUserhost, input[1], Spectator); // input[1] == username
-        Spectator.bMsgEnable = true;
-        ircJoin("&"$sUsername);
+        //Spectator.bMsgEnable = true;
+        //ircJoin("&"$sUsername);
         return;
       }
     }
@@ -155,6 +157,7 @@ function procInput(string Text)
     case "NAMES": ircNAMES(class'wArray'.static.ShiftS(input)); break;
     case "NOTICE": break;
     case "MODE": break;
+    case "JOIN": ircJOIN(class'wArray'.static.ShiftS(input)); break;
     case "PART": ircPART(class'wArray'.static.ShiftS(input)); break;
     case "WHOIS": ircWHOIS(input); break;
     case "KICK": ircKICK(input); break;
@@ -220,6 +223,8 @@ function ircNames(string channel)
 
 function ircJoin(string channel)
 {
+  if (isOnChannel(channel)) return;
+  channels[channels.length] = channel;
   SendRaw(":"$sNickname$"!"$sUserhost@"JOIN :"$channel);
   ircTopic(channel); 
   ircNames(channel); 
@@ -268,10 +273,21 @@ function ircVERSION()
 
 function ircPART(string channel)
 {
-  sendRaw(":"$IRCd.sName@"NOTICE"@sNickname@":You can not part channels");
-  ircJoin(channel);
+  local int i;
+  if (!isOnChannel(channel)) return;
+  for (i = 0; i < Channels.length; i++)
+  {
+    if (Caps(Channels[i]) == Caps(Channel))
+    {
+      Channels.remove(i, 1);
+      break;
+    }
+  }
+  // FIXME: notify others
+  // FIXME: remove from user list?
 }
 
+/** IRC WHOIS command, will search for matching players */
 function ircWHOIS(array<string> input)
 {
   local string whoisname;
@@ -290,9 +306,17 @@ function ircWHOIS(array<string> input)
   IRCSend(":End of /WHOIS list", 318);
 }
 
+/** This send the actual WHOIS reply */
 function whoisReply(TitanIRCd.IRCUser user)
 {
-  IRCSend(user.nickname@user.username@user.hostname@"* :user description here", 311);
+  local string userdesc;
+  if (user.PC.PlayerReplicationInfo.bBot) userdesc = "Bot";
+  else if (UTelAdSESpectator(user.PC) != none) userdesc = "UTelAdSE user";
+  else if (MessagingSpectator(user.PC) != none) userdesc = "System spectator";
+  else if (user.PC.PlayerReplicationInfo.bOnlySpectator) userdesc = "Player spectator";  
+  else if (user.PC.PlayerReplicationInfo.bOutOfLives) userdesc = "Dead player";
+  else userdesc = "Normal player";
+  IRCSend(user.nickname@user.username@user.hostname@"* :"$userdesc, 311);
   IRCSend(user.nickname@IRCd.sName@":"@Level.Game.GameReplicationInfo.ServerName, 312);
   if (user.PC.PlayerReplicationInfo.bAdmin) IRCSend(user.nickname@":is an administrator", 313);
 }
@@ -303,6 +327,17 @@ function ircKICK(array<string> input)
 
 function ircBAN(array<string> input)
 {
+}
+
+/** Checks if the user is registered on the current channel */
+function bool isOnChannel(string channel)
+{
+  local int i;
+  for (i = 0; i < Channels.length; i++)
+  {
+    if (Caps(Channels[i]) == Caps(Channel)) return true;
+  }
+  return false;
 }
 
 ////////////////////////
@@ -321,6 +356,9 @@ function printMOTD()
   IRCSend("- | by Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>", 372);
   IRCSend("- | The Drunk Snipers               http://www.drunksnipers.com", 372);
   IRCSend("- `------------------------------------------------------------", 372);
+  IRCSend("- Valid channels on this server:", 372);
+  IRCSend("-   "@IRCd.sChatChannel, 372);
+  IRCSend("-   "@"&"$sUsername, 372);
   IRCSend("- End of /MOTD command.", 376);
 }
 

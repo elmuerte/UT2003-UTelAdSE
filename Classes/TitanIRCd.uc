@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    TitanIRCd.uc
-// version:     102
+// version:     103
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     IRC server running on the UTelAdSE system
 ///////////////////////////////////////////////////////////////////////////////
 
 class TitanIRCd extends UTelAdSE config exportstructs;
 
-const IRCVERSION = "102";
+const IRCVERSION = "103";
 
 var string sName;
 var string sChatChannel;
@@ -71,18 +71,13 @@ static function FillPlayInfo(PlayInfo PI)
 // IRC User management
 function CreatePlayerList()
 {
-  local int i;
   local PlayerController P;
 
   if (iVerbose > 1) Log("[D] Creating Player List", 'UTelAdSE');
   IRCUsers.length = 0;
   foreach DynamicActors(class'PlayerController', P)
   {
-    i = IRCUsers.length;
-    IRCUsers.length = i+1;
-    IRCUsers[i].nickname = getNickName(fixName(P.PlayerReplicationInfo.PlayerName), P);
-    IRCUsers[i].hostname = getPlayerHost(P);
-    IRCUsers[i].PC = P;
+    AddUserPlayerList("", "", "", P, true);
   }
 }
 
@@ -109,10 +104,13 @@ function int AddUserPlayerList(string nickname, string host, string username, Pl
   IRCUsers[i].oldname = P.PlayerReplicationInfo.PlayerName;
   for (i = 0; i < IRCClients.length; i++)
   {
-    uFlags = GetUserFlags(P);
-    IRCClients[i].SendRaw(":"$nickname$"!"$host@"JOIN"@sChatChannel);
-    if (uFlags == "+") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+v"@nickname);
-    else if (uFlags == "@") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+o"@nickname);
+    if (IRCClients[i].isOnChannel(sChatChannel)) 
+    {
+      uFlags = GetUserFlags(P);
+      IRCClients[i].SendRaw(":"$nickname$"!"$host@"JOIN"@sChatChannel);
+      if (uFlags == "+") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+v"@nickname);
+      else if (uFlags == "@") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+o"@nickname);
+    }
   }
   return uid;
 }
