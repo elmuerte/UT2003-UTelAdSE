@@ -53,27 +53,38 @@ state loggin_in {
         // succesfull login
         if (iVerbose > 0) Log("[~] UnrealIRCD login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         gotostate('logged_in'); 
-        IRCSend("Welcome to UnrealIRCD"@sUsername, 001);
-        IRCSend("Your host is "$sIP$":"$string(parent.listenport)@", running UnrealIRCD version"$UnrealIRCD(parent).IRCVERSION, 002);
-        IRCSend("This server was created on //FIXME:", 003); //FIXME:
-        // TODO: 004
-        // TODO: 005
-        // TODO: 004
-        // TODO: 251
-        // TODO: 252
-        // TODO: 254
-        // TODO: 255
-        // TODO: 265
-        // TODO: 266
-        // TODO: 250
+        IRCSend(":Welcome to UnrealIRCD"@sUsername, 001);
+        IRCSend(":Your host is "$sIP$":"$string(parent.listenport)$", running UnrealIRCD version"@UnrealIRCD(parent).IRCVERSION, 002);
+        IRCSend(":This server was created on //FIXME:", 003); //FIXME: create date
+        IRCSend("UTelAdSE/"$parent.VERSION$" UnrealIRCD/"$UnrealIRCD(parent).IRCVERSION$"", 004); //FIXME: version
+        // PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003
+        // ommited: WALLCHOPS MAXBANS=0 NICKLEN=-1 TOPICLEN=0 CHANMODES= KNOCK MODES=4
+        // #servername
+        // &adminname
+        IRCSend("PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003 MAPPING=rfc1459 :are supported by this server", 005); //FIXME:
+        IRCSend(":There are"@Level.Game.NumPlayers@"players and"@Level.Game.NumSpectators@"specators online", 251);
+        IRCSend("1 :Admins online", 252); // FIXME: 252
+        // TODO: 254, channels formed
+        // TODO: 255, I have .. clients
+        // TODO: 265, current count
+        // TODO: 266, current global
+        // TODO: 250, highest count
         printMOTD();
         if (parent.VersionNotification != "")
         {
-          // FIXME:
+          // FIXME: in motd ?
           SendLine("");
           SendLine(bold(parent.VersionNotification));
         }
         Login();
+        // join #servername
+        SendLine(":"$sUsername$" JOIN :#test");
+        IRCSend("#test :chat channel - talk to players here", 332); // FIXME: topic
+        IRCSend("#test server 1", 333); // FIXME: set by
+        // join &username
+        SendLine(":"$sUsername$" JOIN :&"$sUsername);
+        IRCSend("&"$sUsername$" :Enter here your admin commands", 332); // FIXME: topic
+        IRCSend("&"$sUsername$" server 1", 333); // FIXME: set by
         return;
       }
     }
@@ -95,8 +106,13 @@ function IRCSend(coerce string mesg, optional coerce string code, optional coerc
   local string tmp;
   if (target == "") target = sUsername;
   if (code == "") code = "NOTICE";
-  tmp = ":"$sIP@code@target@":"$mesg;
+  tmp = ":"$sIP@code@target@" "$mesg;
   SendLine(tmp);
+}
+
+function procInput(string Text)
+{
+  // do nothing now
 }
 
 function printMOTD()
