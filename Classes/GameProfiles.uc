@@ -60,11 +60,72 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
   }
 }
 
+function bool viewProfile(int index, UTelAdSEConnection connection)
+{
+  local ProfileConfigSet TempPCS;
+  local PlayInfo TempPI;
+  local class<GameInfo> GIClass;
+	local class<AccessControl> ACClass;
+  local int i, n;
+
+  TempPCS = LadderRules.LadderProfiles[Index];
+  if (TempPCS != none)
+  {
+    TempPCS.StartEdit();
+    TempPCS.EndEdit(false);
+
+    GIClass = TempPCS.GetGameClass();
+    if (GIClass == None)
+    {
+      // TODO: show error message
+      connection.SendLine("no GameInfo class");
+      return true;
+    }
+    ACClass = TempPCS.GetAccessClass();
+    if (ACClass == None)
+    {
+      // TODO: show error message
+      connection.SendLine("no AccessControl class");
+      return true;
+    }
+
+    connection.SendLine("Profile:"@connection.Bold(LadderRules.Profiles[index].ProfileName));
+    connection.SendLine("Gametype:"@string(GIClass));
+    // game info
+    connection.SendLine(connection.Bold(Chr(9)$"Settings"));
+    TempPI = new(None) class'PlayInfo';
+  	GIClass.static.FillPlayInfo(TempPI);
+	  ACClass.static.FillPlayInfo(TempPI);
+
+    // TODO: query mutators
+  	//for (i=0;i<MClass.Length;i++)
+		//  MClass[i].static.FillPlayInfo(TempPI);
+    
+    for (i=0;i<TempPI.Settings.Length;i++)
+    {
+      n = TempPCS.GetParamIndex(TempPI.Settings[i].SettingName);
+      if (n > -1)
+      {
+        connection.SendLine(TempPI.Settings[n].SettingName@"="@TempPCS.GetParam(n));
+      }
+    }
+
+    // mutators
+    connection.SendLine(connection.Bold(Chr(9)$"Mutators"));
+
+    // maps
+    connection.SendLine(connection.Bold(Chr(9)$"Maps"));
+
+
+    return true;
+  }
+  return false;
+}
+
 function execProfiles(array< string > args, UTelAdSEConnection connection)
 {
   local string cmd;
   local int i, index;
-  local ProfileConfigSet TempPCS;
 
   if (CanPerform(connection.Spectator, "Tg"))
 	{
@@ -83,39 +144,38 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
       index = -1;
       if (args.length > 0)
       {
-        if (IsNumeric(args[0]))
-        {
-          index = int(args[0]);
-          cmd = args[0];
+        if (CanPerform(connection.Spectator, "Ls"))
+    		{
+          if (IsNumeric(args[0]))
+          {
+            index = int(args[0]);
+            cmd = args[0];
+          }
+          else {
+            cmd = class'wString'.static.trim(class'wArray'.static.join(args, " "));
+            if (cmd != "")
+            {
+              index = int(LadderRules.AllLadderProfiles.GetItem(LadderRules.AllLadderProfiles.FindTagId(cmd)));
+            }
+          }
         }
         else {
-          cmd = class'wString'.static.trim(class'wArray'.static.join(args, " "));
-          if (cmd != "")
-          {
-            index = int(LadderRules.AllLadderProfiles.GetItem(LadderRules.AllLadderProfiles.FindTagId(cmd)));
-          }
+          connection.SendLine(msg_noprivileges);
+          return;
         }
       }
       else {
         index = LadderRules.FindActiveProfile();
         cmd = "Active profile";
       }
-      if (Index > 0 && Index < LadderRules.LadderProfiles.Length)
+      if (Index > -1 && Index < LadderRules.LadderProfiles.Length)
       {
-        TempPCS = LadderRules.LadderProfiles[Index];
-        if (TempPCS != none)
-        {
-          TempPCS.StartEdit();
-          
-          connection.SendLine("Profile:"@LadderRules.Profiles[index].ProfileName);
-          connection.SendLine("Gametype:"@string(TempPCS.GetGameClass()));
-          connection.SendLine("Max. Maps:"@string(TempPCS.GetMaxMaps()));
-
-          TempPCS.EndEdit(false);
-        }
-        else connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
+        if (!viewProfile(index, connection))
+          connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
       }
-      else connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
+      else {
+        connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
+      }
     }
     else {
       connection.SendLine(msg_usage@PREFIX_BUILTIN$"profiles <list> | <view> [name|id]");

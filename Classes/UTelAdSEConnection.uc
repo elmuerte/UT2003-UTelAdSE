@@ -178,8 +178,8 @@ state telnet_control {
       if (bIssueMsg) printIssueMessage();
       iLoginTries = 0;
       // start login
-      SendLine("Username: ");
       gotostate('loggin_in');
+      SendLine("Username: ");
       SetTimer(fLoginTimeout,false);
     }
   }
@@ -219,6 +219,9 @@ state loggin_in {
 
   event ReceivedText( string Text )
   {
+    local int c;
+    local string Temp;
+
     // fill buffer, while no go ahead (return)
     if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
     if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
@@ -241,9 +244,19 @@ state loggin_in {
       return;
     }
     else {
+      c = InStr(Text, Chr(13));
+      while (c > -1)
+      {
+        Temp = Left(Text, c);
+        Text = Mid(Text, c+1);
+        if (bEcho) SendText(Temp);
+        inputBuffer = inputBuffer$Temp;
+        procLogin(inputBuffer);
+        inputBuffer = "";
+        c = InStr(Text, Chr(13));
+      }
       if (bEcho) SendText(Text);
-      procLogin(inputBuffer);
-      inputBuffer = "";
+      inputBuffer = Text;
     }
   }
 
@@ -338,6 +351,8 @@ state logged_in {
   event ReceivedText( string Text )
   {
     local int c;
+    local string temp;
+
     if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
 
     // if controll char don't buffer
@@ -459,9 +474,19 @@ state logged_in {
       return;
     }
     else {
+      c = InStr(Text, Chr(13));
+      while (c > -1)
+      {
+        Temp = Left(Text, c);
+        Text = Mid(Text, c+1);
+        if (bEcho) SendText(Temp);
+        inputBuffer = inputBuffer$Temp;
+        procInput(inputBuffer);
+        inputBuffer = "";
+        c = InStr(Text, Chr(13));
+      }
       if (bEcho) SendText(Text);
-      procInput(inputBuffer);
-      inputBuffer = "";
+      inputBuffer = Text;
     }
   }
 }
