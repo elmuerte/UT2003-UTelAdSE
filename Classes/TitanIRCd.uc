@@ -9,6 +9,7 @@ class TitanIRCd extends UTelAdSE config;
 
 const IRCVERSION = "100";
 
+var string sName;
 var string sChatChannel;
 var string sCreateTime;
 var byte currentID;
@@ -30,7 +31,9 @@ event PreBeginPlay()
 {
   sCreateTime = class'wTime'.static.date("hh:nn:ss dd-mm-yyyy", Level.Year, Level.Month, Level.Day, Level.Hour, Level.Minute, Level.Second);
   Super.PreBeginPlay();
-  sChatChannel = "#"$fixName(Level.Game.GameReplicationInfo.ShortName);
+  if (Level.Game.GameReplicationInfo.ShortName != "") sChatChannel = "#"$fixName(Left(Level.Game.GameReplicationInfo.ShortName, 10));
+    else sChatChannel = "#"$fixName(Left(Level.Game.GameReplicationInfo.ServerName, 10));
+  sName = sIP$"."$Level.Game.GetServerPort();
 }
 
 event GainedChild( Actor C )
@@ -116,8 +119,8 @@ function int AddUserPlayerList(string nickname, string host, PlayerController P,
   for (i = 0; i < IRCClients.length; i++)
   {
     IRCClients[i].SendRaw(":"$nickname$"!"$host@"JOIN"@sChatChannel);
-    if (IRCUsers[uid].Flag == "+") IRCClients[i].SendRaw(":"$sIP@"MODE"@sChatChannel@":+v"@nickname);
-    else if (IRCUsers[uid].Flag == "@") IRCClients[i].SendRaw(":"$sIP@"MODE"@sChatChannel@":+o"@nickname);
+    if (IRCUsers[uid].Flag == "+") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+v"@nickname);
+    else if (IRCUsers[uid].Flag == "@") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+o"@nickname);
   }
   return uid;
 }

@@ -47,7 +47,6 @@ function string getPlayerHostByPRI(PlayerReplicationInfo PRI)
 
 function PlayerController getPlayerByPRI(PlayerReplicationInfo PRI)
 {
-  local int i;
   local PlayerController P;
 
   foreach DynamicActors(class'PlayerController', P)
@@ -59,7 +58,7 @@ function PlayerController getPlayerByPRI(PlayerReplicationInfo PRI)
 
 function String FormatMessage(PlayerReplicationInfo PRI, String Text, name Type)
 {
-  if (PRI == none) return ":"$IRCClient.IRCd.sIP@"NOTICE"@IRCClient.IRCd.sChatChannel@":"$Text;
+  if (PRI == none) return ":"$IRCClient.IRCd.sName@"NOTICE"@IRCClient.IRCd.sChatChannel@":"$Text;
 	return ":"$getPlayerHostByPRI(PRI)@"PRIVMSG"@IRCClient.IRCd.sChatChannel@":"$Text;
 }
 
@@ -79,7 +78,7 @@ function TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type)
 
 event PreClientTravel()
 {
-  IRCClient.SendRaw(":"$IRCClient.IRCd.sIP@"NOTICE &"$IRCClient.sUsername@":"$msg_shutdownwarning); // FIXME: notice
+  IRCClient.SendRaw(":"$IRCClient.IRCd.sName@"NOTICE &"$IRCClient.sUsername@":"$msg_shutdownwarning); // FIXME: notice
 }
 
 function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )

@@ -31,7 +31,7 @@ state loggin_in {
   event ReceivedText( string Text )
   {
     ReplaceText(Text, Chr(10), "");
-    log("Input:"@Text);
+    if (iVerbose > 1) log("[D] Input:"@Text);
     super.ReceivedText(Text);
   }
 
@@ -45,7 +45,7 @@ state loggin_in {
     {
       // login here
       if (iVerbose > 1) Log("[D] TitanIRCd got username: "$sUsername, 'UTelAdSE');
-      if (iVerbose > 1) Log("[D] TitanIRCd got password: "$sPassword, 'UTelAdSE');
+      if (iVerbose > 1) Log("[D] TitanIRCd got password: *hidden*", 'UTelAdSE');
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
         if (iVerbose > 0) Log("[~] TitanIRCd login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
@@ -117,19 +117,19 @@ function IRCSend(coerce string mesg, optional coerce string code, optional coerc
 
   if (target == "") target = sNickname;
   if (code == "") code = "NOTICE";
-  tmp = ":"$Parent.sIP@code@target@mesg;
+  tmp = ":"$IRCd.sName@code@target@mesg;
   SendRaw(tmp);
 }
 
 function SendLine(string line)
 {
   // send to admin channel
-  SendRaw(":"$Parent.sIP@"PRIVMSG &"$sUsername@":"$line); // come from server
+  SendRaw(":"$IRCd.sName@"PRIVMSG &"$sUsername@":"$line); // come from server
 }
 
 function SendRaw(string line)
 {
-  log("Output["$id$"]:"@line);
+  if (iVerbose > 1) log("Output["$id$"]:"@line);
   SendText(line$Chr(13)$Chr(10));
 }
 
@@ -138,7 +138,7 @@ function procInput(string Text)
   local string prefix;
   local array<string> input;
 
-  log("Input["$id$"]:"@Text);
+  if (iVerbose > 1) log("Input["$id$"]:"@Text);
 
   if (class'wString'.static.split2(Text, " ", input) < 1) return;
   if (Left(input[0], 1) == ":") 
@@ -152,10 +152,10 @@ function procInput(string Text)
     case "QUIT": ircQUIT(input); break;
     case "VERSION": ircVERSION(); break;
     case "NAMES": ircNAMES(class'wArray'.static.ShiftS(input)); break;
-    case "NOTICE":
-    case "MODE":
-    case "PART":
-    case "WHOIS":
+    case "NOTICE": break;
+    case "MODE": break;
+    case "PART": ircPART(class'wArray'.static.ShiftS(input)); break;
+    case "WHOIS": break;
   }
 }
 
@@ -167,7 +167,7 @@ function ircTopic(string channel)
   if (channel == ("&"$sUsername))
   {
     IRCSend(channel$" :Enter your admin commands here", 332); // FIXME: topic
-    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
+    IRCSend(channel$" "$IRCd.sName$" "$unixTimeStamp(), 333); 
   }
   else {
     for (M = Level.Game.BaseMutator.NextMutator; M != None; M = M.NextMutator) 
@@ -177,7 +177,7 @@ function ircTopic(string channel)
     }
     IRCSend(channel$" :"$Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1)@"-"@
       Left(string(Level), InStr(string(Level), "."))@"-"@tmp, 332); // FIXME: topic
-    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
+    IRCSend(channel$" "$IRCd.sName$" "$unixTimeStamp(), 333); 
   }
 }
 
@@ -263,6 +263,12 @@ function ircVERSION()
   IRCSend("PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 TOPICLEN=255 NETWORK=UT2003 MAPPING=rfc1459 :are supported by this server", 005);
 }
 
+function ircPART(string channel)
+{
+  sendRaw(":"$IRCd.sName@"NOTICE"@sNickname@":You can not part channels");
+  ircJoin(channel);
+}
+
 ////////////////////////
 
 function string unixTimeStamp()
@@ -272,7 +278,7 @@ function string unixTimeStamp()
 
 function printMOTD()
 {
-  IRCSend("- "$Parent.sIP@"Message of the Day", 375);
+  IRCSend("- "$IRCd.sName@"Message of the Day", 375);
   IRCSend("- ,------------------------------------------------------------", 372);
   IRCSend("- | "$Bold("Welcome to TitanIRCd version "$IRCd.IRCVERSION), 372);
   IRCSend("- | Running on "$Bold(Level.Game.GameReplicationInfo.ServerName), 372);
