@@ -120,9 +120,8 @@ defaultproperties
      MaxConnections=10
      AcceptClass=Class'UTelAdSE.UTelAdSEConnection'
      CheckVersion=true
-     iVerbose=2
+     iVerbose=1
      TelnetHelperClasses(0)=class'UTelAdSE.DefaultBuiltins'
      TelnetHelperClasses(1)=class'UTelAdSE.UserGroupAdmin'
      TelnetHelperClasses(2)=class'UTelAdSE.ServerBuiltins'
-     TelnetHelperClasses(3)=class'UTelAdSE.GameProfiles'
 }
