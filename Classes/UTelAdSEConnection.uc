@@ -11,10 +11,24 @@
 
 class UTelAdSEConnection extends TcpLink config;
 
-const MAXHISTSIZE = 10; // size of the history
+const MAXHISTSIZE = 20; // size of the history
 const PREFIX_BUILTIN = "/";
 const PREFIX_SAY = ".";
 const TERM_NEGOTIATION = 1.0; // telnet negotiation timeout, in seconds
+
+// telnet protocol
+const T_IAC       = 255;
+const T_WILL      = 251;
+const T_WONT      = 252;
+const T_DO        = 253;
+const T_DONT      = 254;
+const T_SB        = 250;
+const T_SE        = 240;
+// options
+const O_ECHO      = 1;
+const O_SGOAHEAD  = 3;
+const O_TERMINAL  = 24;
+const O_WSIZE     = 31;
 
 var globalconfig bool bIssueMsg;
 var globalconfig bool bStartChat;
@@ -112,18 +126,20 @@ event Destroyed()
 function startTelnetControl()
 {
   // don't echo - server: WILL ECHO
-  SendText(Chr(255)$Chr(251)$Chr(1));
+  SendText(Chr(T_IAC)$Chr(T_WILL)$Chr(O_ECHO));
   // will supress go ahead
-  SendText(Chr(255)$Chr(251)$Chr(3));
+  SendText(Chr(T_IAC)$Chr(T_WILL)$Chr(O_SGOAHEAD));
   // do terminal-type
-  SendText(Chr(255)$Chr(253)$Chr(24));
-  SendText(Chr(255)$Chr(250)$Chr(24)$Chr(1)$Chr(255)$Chr(240));
+  SendText(Chr(T_IAC)$Chr(T_DO)$Chr(O_TERMINAL));
+  SendText(Chr(T_IAC)$Chr(T_SB)$Chr(O_TERMINAL)$Chr(1)$Chr(T_IAC)$Chr(T_SE));
   session.setValue("TERM_TYPE", "UNKNOWN", true);
   // do terminal size
-  SendText(Chr(255)$Chr(253)$Chr(31));
+  SendText(Chr(T_IAC)$Chr(T_DO)$Chr(O_WSIZE));
   // default
   session.setValue("TERM_WIDTH", "80", true);
   session.setValue("TERM_HEIGHT", "25", true);
+  // do envoirement variables
+  SendText(Chr(T_IAC)$Chr(T_DO)$Chr(39));
 
   if (int(Level.EngineVersion) < 2175)
   {
@@ -161,25 +177,25 @@ function procTelnetControl(int Count, byte B[255])
 
   for (j = 0; j < Count; j++)
   {
-    if (B[j] == 255) // IAC
+    if (B[j] == T_IAC) // IAC
     {
       j++;
-      if (B[j] == 250) // SB
+      if (B[j] == T_SB) // SB
       {
         j++;
         switch (B[j])
         {
-          case 31:  // term size
+          case O_WSIZE:  // term size
                     session.setValue("TERM_WIDTH", string(B[j+1]*256+B[j+2]), true);
                     session.setValue("TERM_HEIGHT", string(B[j+3]*256+B[j+4]), true);
                     j = j+5;
                     bTelnetGotSize = true;
                     if (iVerbose > 1) log("[D] received term size:"@session.getValue("TERM_WIDTH")$"x"$session.getValue("TERM_HEIGHT"), 'UTelAdSE');
                     break;
-          case 24:  // term type
+          case O_TERMINAL:  // term type
                     j += 2;
                     tmp = "";
-                    while (B[j] != 255) 
+                    while (B[j] != T_IAC) 
                     {
                       tmp = tmp$Chr(B[j]);
                       j++;
@@ -189,6 +205,28 @@ function procTelnetControl(int Count, byte B[255])
                     session.setValue("TERM_TYPE", tmp, true);
                     if (iVerbose > 1) log("[D] received term type:"@tmp, 'UTelAdSE');
                     break;
+          case 39: // envoirement vars
+                    j += 2;
+                    tmp = "";
+                    while (B[j] != T_IAC) 
+                    {
+                      tmp = tmp@B[j];
+                      j++;
+                    }
+                    j--;
+                    if (iVerbose > 1) log("[D] received envoirement vars, contact elmuerte about this: "$tmp, 'UTelAdSE');
+                    break;
+                    
+        }
+      }
+      else if (B[j] == T_WILL)
+      {
+        j++;
+        switch (B[j])
+        {
+          case 39: // will envoirement                  SEND    VAR   
+                   SendText(Chr(T_IAC)$Chr(T_SB)$Chr(39)$Chr(1)$Chr(0)$Chr(T_IAC)$Chr(T_SE));
+                   break;
         }
       }
     }
@@ -274,7 +312,7 @@ state loggin_in {
     local string Temp;
 
     // fill buffer, while no go ahead (return)
-    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+    if (Left(Text, 1) == Chr(T_IAC)) return; // telnet commands ignore in this state
     if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
     if (InStr(Text, Chr(13)) == -1)
     {
@@ -420,7 +458,7 @@ state logged_in {
     local int c;
     local string temp;
 
-    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+    if (Left(Text, 1) == Chr(T_IAC)) return; // telnet commands ignore in this state
 
     // if controll char don't buffer
     // ESC+key
@@ -562,7 +600,7 @@ state logged_in {
     local string tmp;
     local int i;
     if (count < 1) return;
-    if (B[0] == 255) procTelnetControl(Count, B);
+    if (B[0] == T_IAC) procTelnetControl(Count, B);
     else {
       for (i = 0; i < count; i++)
       {
@@ -599,7 +637,7 @@ state auto_pager extends logged_in {
   event ReceivedText( string Text )
   {
     local int i;
-    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+    if (Left(Text, 1) == Chr(T_IAC)) return; // telnet commands ignore in this state
     if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
 
     SendText(Chr(27)$"["$Len(msg_pager)$"D"$Chr(27)$"[K"$Chr(27)$"[1A"); // erase line

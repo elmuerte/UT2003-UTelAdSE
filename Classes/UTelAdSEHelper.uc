@@ -13,6 +13,12 @@ var localized string msg_noprivileges;
 var localized string msg_unknownsubcommand;
 var localized string msg_usage;
 
+// colors to use with the Colorise function
+enum ETerm_color
+{
+  clBlack, clRed, clGreen, clYellow, clBlue, clMegenta, clCyan, clWhite
+};
+
 /*****************************************************************
   Called methods, the following methods will be called by UTelAdSE 
   *****************************************************************/
@@ -151,6 +157,14 @@ function static string Blink(string text)
 function static string Reverse(string text)
 {
   return Chr(27)$"[7m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Set the for and background color
+//-----------------------------------------------------------------------------
+function static string Colorise(string text, ETerm_color color, optional ETerm_color bgcolor)
+{
+  return Chr(27)$"["$string(int(color)+30)$";"$string(int(bgcolor)+40)$"m"$text$Chr(27)$"[0m";
 }
 
 defaultproperties

@@ -20,6 +20,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
   switch (command)
   {
     case "stdin" : stealSTDIN(args, connection); hideprompt=1; return true;
+    case "colorise" : colorTest(connection); return true;
   }
   return false;
 }
@@ -41,6 +42,21 @@ function stealSTDIN(array< string > args, UTelAdSEConnection connection)
       connection.SendLine("========================================");
       connection.session.setValue("hangman_endgame", "1", true);
     }
+  }
+}
+
+function colorTest(UTelAdSEConnection connection)
+{
+  local int i, j;
+  local string tmp;
+  for (i=0; i < int(connection.session.getValue("TERM_HEIGHT", "25"))-1; i++)
+  {
+    tmp = "";
+    for (j=0; j < int(connection.session.getValue("TERM_WIDTH", "80")); j++)
+    {
+      tmp = tmp$Colorise(Chr(rand(27)+65), ETerm_color(rand(8)), ETerm_color(rand(8)));
+    }
+    connection.SendLine(tmp);
   }
 }
 
