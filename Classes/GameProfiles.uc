@@ -1,0 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+// filename:    GameProfiles.uc
+// version:     100
+// author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
+// purpose:     manage game profiles
+///////////////////////////////////////////////////////////////////////////////
+
+class GameProfiles extends UTelAdSEHelper;
+
+const VERSION = "100";
+
+// place holder
