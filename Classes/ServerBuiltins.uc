@@ -1057,7 +1057,7 @@ function ExecIPPolicy( array< string > args, UTelAdSEConnection connection)
 // IP Policy settings
 function ExecKeyPolicy( array< string > args, UTelAdSEConnection connection)
 {
-  local string cmd, pol_key, pol_pol;
+  local string cmd, pol_key, pol_name;
   local int i;
  
   if (int(Level.EngineVersion) < 2153)
@@ -1073,60 +1073,54 @@ function ExecKeyPolicy( array< string > args, UTelAdSEConnection connection)
     {
       for (i = 0; i < level.game.AccessControl.BannedIDs.length; i++)
       {
-        divide(level.game.AccessControl.BannedIDs[i], ",", pol_pol, pol_key);
-        connection.SendLine(StrReplace(StrReplace(msg_ip_policy, "%s", pol_pol), "%i", pol_key));
+        divide(level.game.AccessControl.BannedIDs[i], " ", pol_key, pol_name);
+        connection.SendLine(StrReplace(StrReplace(msg_key_policy, "%s", pol_name), "%k", pol_key));
       }
     }
-    /*
     else if (cmd == "set")
     {
       if (args.length == 2)
       {
-        if ((caps(args[1]) != "ACCEPT") && (caps(args[1]) != "DENY"))
+        for (i = 0; i < level.game.AccessControl.BannedIDs.length; i++)
         {
-          connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
-          return;
-        }
-        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
-        {
-          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
-          if (pol_ip == args[0])
+          divide(level.game.AccessControl.BannedIDs[i], " ", pol_key, pol_name);
+          if (pol_key == args[0])
           {
-            level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$pol_ip;
-            connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", pol_ip));
+            level.game.AccessControl.BannedIDs[i] = args[0]$" "$args[1];
+            connection.SendLine(StrReplace(StrReplace(msg_key_set, "%s", args[1]), "%k", args[0]));
             return;
           }
         }
-        level.game.AccessControl.IPPolicies.length = level.game.AccessControl.IPPolicies.length+1;
-        level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$args[0];
-        connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", args[0]));
+        level.game.AccessControl.BannedIDs.length = level.game.AccessControl.BannedIDs.length+1;
+        level.game.AccessControl.BannedIDs[i] = args[0]$" "$args[1];
+        connection.SendLine(StrReplace(StrReplace(msg_key_set, "%s", args[1]), "%k", args[0]));
       }
       else {
-        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"keypolicy <set> Key-hash Playername");
       }
     }
     else if (cmd == "remove")
     {
       if (args.length == 1)
       {
-        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+        for (i = 0; i < level.game.AccessControl.BannedIDs.length; i++)
         {
-          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
-          if (pol_ip == args[0])
+          divide(level.game.AccessControl.BannedIDs[i], " ", pol_key, pol_name);
+          if ((pol_key == args[0]) || (pol_name ~= args[0]))
           {
-            level.game.AccessControl.IPPolicies.Remove(i, 1);
-            connection.SendLine(StrReplace(msg_ip_remove, "%i", pol_ip));
+            level.game.AccessControl.BannedIDs.Remove(i, 1);
+            connection.SendLine(StrReplace(StrReplace(msg_key_remove, "%s", pol_name), "%k", pol_key));
             return;
           }
         }
-        connection.SendLine(msg_ip_nopolicy);
+        connection.SendLine(msg_key_nopolicy);
       }
       else {
-        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <remove> IP-mask");
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"keypolicy <remove> Key-hash|Playername");
       }
-    }*/
+    }
     else {
-      connection.SendLine(msg_usage@PREFIX_BUILTIN$"keypolicy <list> | <set> Key-hash <accept|deny> | <remove> Key-hash");
+      connection.SendLine(msg_usage@PREFIX_BUILTIN$"keypolicy <list> | <set> Key-hash Playername> | <remove> Key-hash|Playername");
     }
   }
   else {
@@ -1258,8 +1252,8 @@ defaultproperties
   msg_ip_remove="Removed IP policy for %i"
   msg_ip_nopolicy="There is no policy for that IP-mask"
 
-  msg_key_policy="CDKey hash: %i policy: %s"
-  msg_key_set="Set policy of %i to %s"
-  msg_key_remove="Removed CDKey Hash policy for %i"
-  msg_key_nopolicy="There is no policy for that CDKey hash"
+  msg_key_policy="CDKey hash: %k Player name: %s"
+  msg_key_set="Set CDKey hash ban for %k with name %s"
+  msg_key_remove="Removed CDKey Hash ban for %k with name %s"
+  msg_key_nopolicy="There is no ban for that CDKey hash"
 }
