@@ -331,6 +331,7 @@ state loggin_in {
         SendLine("");
         if (bStartChat) inBuiltin("togglechat");
         gotostate('logged_in');
+        Login();
         SendPrompt();
         return;
       }
@@ -607,27 +608,76 @@ function SendPrompt()
 }
 
 //-----------------------------------------------------------------------------
+// Try to logout Logout
+//-----------------------------------------------------------------------------
+function Logout()
+{
+  local int i, canlogout;
+  local array<string> messages;
+  for (i=0; i<Parent.TelnetHelpers.Length; i++)
+	{
+		Parent.TelnetHelpers[i].OnLogout(self, canlogout, messages);
+	}
+  if (canlogout != 0)
+  {
+    for (i = 0; i < messages.length; i++)
+    {
+      SendLine(messages[i]);
+    }
+  }
+  else Close();
+}
+
+//-----------------------------------------------------------------------------
+// Execute builtin command
+//-----------------------------------------------------------------------------
+function Login()
+{
+  local int i;
+  for (i=0; i<Parent.TelnetHelpers.Length; i++)
+	{
+		Parent.TelnetHelpers[i].OnLogin(self);
+	}
+}
+
+//-----------------------------------------------------------------------------
 // Make the text bold
 //-----------------------------------------------------------------------------
-function static string Bold(string text)
+function string Bold(string text)
 {
-  return Chr(27)$"[1m"$text$Chr(27)$"[0m";
+  return class'UTelAdSEHelper'.static.Bold(text);
 }
 
 //-----------------------------------------------------------------------------
 // Make the text blink
 //-----------------------------------------------------------------------------
-function static string Blink(string text)
+function string Blink(string text)
 {
-  return Chr(27)$"[5m"$text$Chr(27)$"[0m";
+  return class'UTelAdSEHelper'.static.Blink(text);
 }
 
 //-----------------------------------------------------------------------------
 // Make the text reverse video
 //-----------------------------------------------------------------------------
-function static string Reverse(string text)
+function string Reverse(string text)
 {
-  return Chr(27)$"[7m"$text$Chr(27)$"[0m";
+  return class'UTelAdSEHelper'.static.Reverse(text);
+}
+
+//-----------------------------------------------------------------------------
+// Clear the screen
+//-----------------------------------------------------------------------------
+function CLSR()
+{
+  SendText(Chr(27)$"[2J");
+}
+
+//-----------------------------------------------------------------------------
+// Clear the screen
+//-----------------------------------------------------------------------------
+function MoveCursor(int top, int left)
+{
+  SendText(Chr(27)$"["$string(top)$";"$string(left)$"H");
 }
 
 //-----------------------------------------------------------------------------

@@ -61,6 +61,18 @@ function HandleInput(string Text, UTelAdSEConnection connection)
 {
 }
 
+// function:  Do stuff when a client logs in
+function OnLogin(UTelAdSEConnection connection)
+{
+}
+
+// function:  Do stuff when a client logs out
+// output:    set canlogout to a non zero value when the user can't logout
+//            messages is the messages to be displayed on logout
+function OnLogout(UTelAdSEConnection connection, out int canlogout, out array<string> messages)
+{
+}
+
 /*************************************************************
   General perpose functions, you don't have to overwrite these 
   *************************************************************/
@@ -115,6 +127,30 @@ function string strReplace(string source, string change, string with)
 {
   ReplaceText(source, change, with);
   return source;
+}
+
+//-----------------------------------------------------------------------------
+// Make the text bold
+//-----------------------------------------------------------------------------
+function static string Bold(string text)
+{
+  return Chr(27)$"[1m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Make the text blink
+//-----------------------------------------------------------------------------
+function static string Blink(string text)
+{
+  return Chr(27)$"[5m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Make the text reverse video
+//-----------------------------------------------------------------------------
+function static string Reverse(string text)
+{
+  return Chr(27)$"[7m"$text$Chr(27)$"[0m";
 }
 
 defaultproperties

@@ -31,11 +31,15 @@ function stealSTDIN(array< string > args, UTelAdSEConnection connection)
   {
     if (args[0] == "hangman")
     {
+      connection.CLSR();
+      connection.MoveCursor(0,0);
       connection.session.setValue("hangman_enabled", "1", true);
-      connection.SendLine("====================================");
-      connection.SendLine("      Welcome to UT2003 Hangman     ");
-      connection.SendLine("You can quit any time by pressing ^C");
-      startHangman(connection);
+      connection.SendLine("========================================");
+      connection.SendLine("=       "$Bold("Welcome to UT2003 Hangman")$"      =");
+      connection.SendLine("= You can quit any time by pressing "$Bold("^C")$" =");
+      connection.SendLine("=        "$Blink("Press any key to begin")$"        =");
+      connection.SendLine("========================================");
+      connection.session.setValue("hangman_endgame", "1", true);
     }
   }
 }
@@ -55,6 +59,7 @@ function HandleInput(string Text, UTelAdSEConnection connection)
 }
 
 // Hangman game
+// you can think of this game as an easter egg
 
 function string getHandmanWord()
 {
@@ -76,6 +81,8 @@ function string maskWord(string word, string chars)
 function startHangman(UTelAdSEConnection connection)
 {
   local string word;
+  connection.CLSR();
+  connection.MoveCursor(0,0);
   connection.session.setValue("hangman_endgame", "0", true);
   connection.session.setValue("hangman_wrongs", "0", true);
   connection.session.setValue("hangman_guesses", "0", true);

@@ -9,10 +9,20 @@ class DefaultBuiltins extends UTelAdSEHelper;
 
 const VERSION = "102";
 
+var localized string msg_goodbye;
 var localized string msg_chat_nospectator;
 var localized string msg_chat_mode;
 var localized string msg_noplayers;
 var localized string msg_pager_status;
+
+var localized string msg_status_gametype;
+var localized string msg_status_map;
+var localized string msg_status_mutators;
+var localized string msg_status_players;
+var localized string msg_status_spectators;
+var localized string msg_status_of;
+
+var localized string msg_player;
 
 function bool Init()
 {
@@ -24,7 +34,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
 {
   switch (command)
   {
-    case "logout" : connection.SendLine("Goodbye!"$chr(13)$chr(10)); hideprompt = 1; connection.Close(); return true;
+    case "logout" : connection.SendLine(msg_goodbye$chr(13)$chr(10)); hideprompt = 1; connection.Logout(); return true;
     case "togglechat" : ToggleChat(connection); return true;
     case "status" : SendStatus(connection); return true;
     case "players" : SendPlayers(connection); return true;
@@ -73,16 +83,16 @@ function SendStatus(UTelAdSEConnection connection)
   local string tmp;
   local Mutator M;
 
-  connection.SendLine("| Gametype:"$Chr(9)$Chr(9)$Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1));
-  connection.SendLine("| Current map: "$Chr(9)$Chr(9)$Left(string(Level), InStr(string(Level), ".")));
+  connection.SendLine("| "$msg_status_gametype$":"$Chr(9)$Chr(9)$Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1));
+  connection.SendLine("| "$msg_status_map$": "$Chr(9)$Chr(9)$Left(string(Level), InStr(string(Level), ".")));
   for (M = Level.Game.BaseMutator.NextMutator; M != None; M = M.NextMutator) 
   {
     if (tmp != "") tmp = tmp$", ";
     tmp = tmp$(M.GetHumanReadableName());
   }
-  connection.SendLine("| Mutators: "$Chr(9)$Chr(9)$tmp);
-  connection.SendLine("| Number of players: "$Chr(9)$Level.Game.NumPlayers$" of "$Level.Game.MaxPlayers);
-  connection.SendLine("| Spectators: "$Chr(9)$Chr(9)$Level.Game.NumSpectators$" of "$Level.Game.MaxSpectators);
+  connection.SendLine("| "$msg_status_mutators$": "$Chr(9)$Chr(9)$tmp);
+  connection.SendLine("| "$msg_status_players$": "$Chr(9)$Level.Game.NumPlayers@msg_status_of@Level.Game.MaxPlayers);
+  connection.SendLine("| "$msg_status_spectators$": "$Chr(9)$Chr(9)$Level.Game.NumSpectators@msg_status_of@Level.Game.MaxSpectators);
 }
 
 function SendPlayers(UTelAdSEConnection connection)
@@ -110,7 +120,7 @@ function SendPlayers(UTelAdSEConnection connection)
     {
       IP = PlayerController(C).GetPlayerNetworkAddress();
 			IP = Left(IP, InStr(IP, ":"));
-			connection.SendLine("| Player "$C.PlayerNum$":"$Chr(9)$PRI.PlayerName$Chr(9)$PRI.Score$Chr(9)$PRI.Ping$Chr(9)$IP);
+			connection.SendLine("| "$msg_player@C.PlayerNum$":"$Chr(9)$PRI.PlayerName$Chr(9)$PRI.Score$Chr(9)$PRI.Ping$Chr(9)$IP);
     }
   }
 }
@@ -122,13 +132,24 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
   if (InStr("logout", commandline[0]) == 0) AddArray(options, "logout");
   if (InStr("players", commandline[0]) == 0) AddArray(options, "players");
   if (InStr("togglechat", commandline[0]) == 0) AddArray(options, "togglechat");
+  if (InStr("togglepager", commandline[0]) == 0) AddArray(options, "togglepager");
   return true;
 }
 
 defaultproperties
 {
+  msg_goodbye="Goodbye!"
   msg_chat_nospectator="Error: No spectator"
   msg_chat_mode="Chat mode is now:"
   msg_noplayers="There are no players on the server"
   msg_pager_status="Pager enabled is:"
+
+  msg_status_gametype="Gametype"
+  msg_status_map="Current map"
+  msg_status_mutators="Mutators"
+  msg_status_players="Current players"
+  msg_status_spectators="Spectators"
+  msg_status_of="of"
+
+  msg_player="Player"
 }

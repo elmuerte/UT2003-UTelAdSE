@@ -20,6 +20,10 @@ var localized string msg_mut_group;
 var localized string msg_mut_add;
 var localized string msg_mut_remove;
 var localized string msg_mut_restart;
+var localized string msg_mutator_name;
+var localized string msg_mutator_class;
+var localized string msg_mutator_group;
+var localized string msg_mutator_description;
 
 var localized string msg_bot_nobotgame;
 var localized string msg_bot_statsgame;
@@ -296,10 +300,10 @@ function ExecMutator(array< string > args, UTelAdSEConnection connection)
       {
         if (AllMutators[i].ClassName ~= FindMutator(args[0]))
         {
-          connection.SendLine("Mutator: "$chr(9)$AllMutators[i].FriendlyName);
-          connection.SendLine("Class: "$chr(9)$chr(9)$AllMutators[i].ClassName);
-          connection.SendLine("Group: "$chr(9)$chr(9)$AllMutators[i].GroupName);
-          connection.SendLine("Description: "$chr(9)$AllMutators[i].Description);
+          connection.SendLine(msg_mutator_name$": "$chr(9)$AllMutators[i].FriendlyName);
+          connection.SendLine(msg_mutator_class$": "$chr(9)$chr(9)$AllMutators[i].ClassName);
+          connection.SendLine(msg_mutator_group$": "$chr(9)$chr(9)$AllMutators[i].GroupName);
+          connection.SendLine(msg_mutator_description$": "$chr(9)$AllMutators[i].Description);
           break;
         }
       }
@@ -1106,7 +1110,7 @@ function ExecKeyPolicy( array< string > args, UTelAdSEConnection connection)
         for (i = 0; i < level.game.AccessControl.BannedIDs.length; i++)
         {
           divide(level.game.AccessControl.BannedIDs[i], " ", pol_key, pol_name);
-          if ((pol_key == args[0]) || (pol_name ~= args[0]))
+          if ((MaskedCompare(args[0], pol_key)) || (MaskedCompare(args[0], pol_name)))
           {
             level.game.AccessControl.BannedIDs.Remove(i, 1);
             connection.SendLine(StrReplace(StrReplace(msg_key_remove, "%s", pol_name), "%k", pol_key));
@@ -1210,6 +1214,10 @@ defaultproperties
   msg_mut_add="Added mutator '%s' to the list"
   msg_mut_remove="Removed mutator '%s' from the list"
   msg_mut_restart="You have to restart the server for changes to take effect (/map restart)"
+  msg_mutator_name="Mutator"
+  msg_mutator_class="Class"
+  msg_mutator_group="Group"
+  msg_mutator_description="Description"
 
   msg_bot_nobotgame="This is not a bot game"
   msg_bot_statsgame="Can't modify bots, stats is enabled"
