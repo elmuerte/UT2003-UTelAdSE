@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    UTelAdSE.uc
-// version:     101
+// version:     102
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     connection acceptng class for UTelAdSE
 ///////////////////////////////////////////////////////////////////////////////
 
 class UTelAdSE extends TcpLink config;
 
-const VERSION = "101";
+const VERSION = "102";
 
 var globalconfig int ListenPort;
 var globalconfig int MaxConnections;

@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    UTelAdSEConnection.uc
-// version:     104
+// version:     105
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     The actual Telnet Admin client
 //              command prefixes:
@@ -61,6 +61,9 @@ var localized string msg_shutdownwarning;
 
 var UTelAdSEHelper STDIN; // active STDIN handlers
 
+//-----------------------------------------------------------------------------
+// Socket accepted start working
+//-----------------------------------------------------------------------------
 event Accepted()
 {
   local IpAddr addr;
@@ -81,12 +84,12 @@ event Accepted()
   iHistOffset = 0;
   bEscapeCode = false;
 
-  gotostate('telnet_control');
   LinkMode = MODE_Binary;
   if (int(Level.EngineVersion) < 2175)
   {
+    gotostate('telnet_control');
     // ReceiveBinary is broken
-    if (iVerbose > 1) log("[D] Unreal engine version below 2175", 'UTelAdSE');
+    if (iVerbose > 1) log("[D] Unreal engine version below 2175, switch to RMODE_Manual", 'UTelAdSE');
     ReceiveMode = RMODE_Manual;
   }
   startTelnetControl(); // process telnet controlls
@@ -103,6 +106,9 @@ event Destroyed()
   if (IsConnected()) Close();
 }
 
+//-----------------------------------------------------------------------------
+// Initial Telnet Control handshaking
+//-----------------------------------------------------------------------------
 function startTelnetControl()
 {
   // don't echo - server: WILL ECHO
@@ -119,67 +125,95 @@ function startTelnetControl()
   session.setValue("TERM_WIDTH", "80", true);
   session.setValue("TERM_HEIGHT", "25", true);
 
-  bTelnetGotSize = false;
-  bTelnetGotType = false;
-  fTelnetNegotiation = 0;
-  enable('Tick');
+  if (int(Level.EngineVersion) < 2175)
+  {
+    if (iVerbose > 1) log("[D] Unreal engine version below 2175, pre control processing", 'UTelAdSE');
+    bTelnetGotSize = false;
+    bTelnetGotType = false;
+    fTelnetNegotiation = 0; 
+    enable('Tick');
+  }
+  else {
+    StartLogin();
+  }
+}
+
+//-----------------------------------------------------------------------------
+// Start login sequence
+//-----------------------------------------------------------------------------
+function StartLogin()
+{
+  if (bIssueMsg) printIssueMessage();
+  iLoginTries = 0;
+  // start login
+  gotostate('loggin_in');
+  SendLine("Username: ");
+  SetTimer(fLoginTimeout,false);
+}
+
+//-----------------------------------------------------------------------------
+// Process incoming telnet control codes
+//-----------------------------------------------------------------------------
+function procTelnetControl(int Count, byte B[255])
+{
+  local int j;
+  local string tmp;
+
+  for (j = 0; j < Count; j++)
+  {
+    if (B[j] == 255) // IAC
+    {
+      j++;
+      if (B[j] == 250) // SB
+      {
+        j++;
+        switch (B[j])
+        {
+          case 31:  // term size
+                    session.setValue("TERM_WIDTH", string(B[j+1]*256+B[j+2]), true);
+                    session.setValue("TERM_HEIGHT", string(B[j+3]*256+B[j+4]), true);
+                    j = j+5;
+                    bTelnetGotSize = true;
+                    if (iVerbose > 1) log("[D] received term size:"@session.getValue("TERM_WIDTH")$"x"$session.getValue("TERM_HEIGHT"), 'UTelAdSE');
+                    break;
+          case 24:  // term type
+                    j += 2;
+                    tmp = "";
+                    while (B[j] != 255) 
+                    {
+                      tmp = tmp$Chr(B[j]);
+                      j++;
+                    }
+                    j--;
+                    bTelnetGotType = true;
+                    session.setValue("TERM_TYPE", tmp, true);
+                    if (iVerbose > 1) log("[D] received term type:"@tmp, 'UTelAdSE');
+                    break;
+        }
+      }
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Telnet negotiation
 ///////////////////////////////////////////////////////////////////////////////
-state telnet_control {
+state telnet_control {  
 
-  function procTelnetControl(int Count, byte B[255])
+  function oldProcTelnetControl(int Count, byte B[255])
   {
-    local int j;
-    local string tmp;
-
-    for (j = 0; j < Count; j++)
-    {
-      if (B[j] == 255) // IAC
-      {
-        j++;
-        if (B[j] == 250) // SB
-        {
-          j++;
-          switch (B[j])
-          {
-            case 31:  // term size
-                      session.setValue("TERM_WIDTH", string(B[j+1]*256+B[j+2]), true);
-                      session.setValue("TERM_HEIGHT", string(B[j+3]*256+B[j+4]), true);
-                      j = j+5;
-                      bTelnetGotSize = true;
-                      if (iVerbose > 1) log("[D] received term size:"@session.getValue("TERM_WIDTH")$"x"$session.getValue("TERM_HEIGHT"), 'UTelAdSE');
-                      break;
-            case 24:  // term type
-                      j += 2;
-                      tmp = "";
-                      while (B[j] != 255) 
-                      {
-                        tmp = tmp$Chr(B[j]);
-                        j++;
-                      }
-                      j--;
-                      bTelnetGotType = true;
-                      session.setValue("TERM_TYPE", tmp, true);
-                      if (iVerbose > 1) log("[D] received term type:"@tmp, 'UTelAdSE');
-                      break;
-          }
-        }
-      }
-    }
+    procTelnetControl(Count, B);
     if ((bTelnetGotSize && bTelnetGotType) || (fTelnetNegotiation > TERM_NEGOTIATION))
     {
       disable('Tick');
-      LinkMode = MODE_Text;
+
+      if (int(Level.EngineVersion) < 2175)
+      {
+        if (iVerbose > 1) log("[D] Unreal engine version below 2175, switch to MODE_Text", 'UTelAdSE');
+        LinkMode = MODE_Text;
+      } // else remain in binary mode
       ReceiveMode = RMODE_Event;
-      if (bIssueMsg) printIssueMessage();
-      iLoginTries = 0;
-      // start login
-      gotostate('loggin_in');
-      SendLine("Username: ");
-      SetTimer(fLoginTimeout,false);
+      StartLogin();
     }
   }
 
@@ -192,12 +226,12 @@ state telnet_control {
     fTelnetNegotiation += delta;
     if (int(Level.EngineVersion) >= 2175) return;
     i = ReadBinary(255,bCode);
-    procTelnetControl(i, bCode);
+    oldProcTelnetControl(i, bCode);
   }
 
   event ReceivedBinary( int Count, byte B[255] )
   {
-    procTelnetControl(count, B);
+    oldProcTelnetControl(count, B);
   }
     
 }
@@ -274,6 +308,21 @@ state loggin_in {
       }
       if (bEcho) SendText(Text);
       inputBuffer = Text;
+    }
+  }
+
+  event ReceivedBinary( int Count, byte B[255] )
+  {
+    local string tmp;
+    local int i;
+    if (count < 1) return;
+    if (B[0] == 255) procTelnetControl(Count, B);
+    else {
+      for (i = 0; i < count; i++)
+      {
+        tmp = tmp$Chr(B[i]);
+      }
+      ReceivedText(tmp);
     }
   }
 
@@ -505,6 +554,21 @@ state logged_in {
       }
       if (bEcho) SendText(Text);
       inputBuffer = Text;
+    }
+  }
+
+  event ReceivedBinary( int Count, byte B[255] )
+  {
+    local string tmp;
+    local int i;
+    if (count < 1) return;
+    if (B[0] == 255) procTelnetControl(Count, B);
+    else {
+      for (i = 0; i < count; i++)
+      {
+        tmp = tmp$Chr(B[i]);
+      }
+      ReceivedText(tmp);
     }
   }
 }
