@@ -4,6 +4,9 @@
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     connection acceptng class for UTelAdSE
 ///////////////////////////////////////////////////////////////////////////////
+/**
+  Connection accepting class for UTelAdSE
+*/
 class UTelAdSE extends TcpLink config;
 
 const VERSION = "103";
