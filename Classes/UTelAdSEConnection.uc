@@ -11,32 +11,38 @@
 
 class UTelAdSEConnection extends TcpLink config;
 
-const DEBUG = false;
 const MAXHISTSIZE = 10; // size of the history
 const PREFIX_BUILTIN = "/";
 const PREFIX_SAY = ".";
+const TERM_NEGOTIATION = 1.0; // telnet negotiation timeout, in seconds
 
 var globalconfig bool bIssueMsg;
 var globalconfig bool bStartChat;
+var globalconfig float fLoginTimeout;
+var globalconfig float fInvalidLoginDelay;
+var int iVerbose;
 
 var UTelAdSESpectator Spectator; // message spectator
 var UTelAdSE parent; // parent, used to reuse the TelnetHelpers
-var bool bLoggedin;
 var string sUsername;
 var string sPassword;
 var int iLoginTries;
 var string sIP; // server IP
-var bool bIgnoreInput;
 
 var array<string> history; // array with command history
 var int iHistOffset; // current offset in the history
 var string inputBuffer; 
 var bool bEcho; // echo the input characters
 var bool bEscapeCode; // working on an escape code
+
+var bool bTelnetGotType, bTelnetGotSize;
+var float fTelnetNegotiation;
+
 var xAdminUser CurAdmin;
 var UTelAdSESession Session; // session per connection, can be used to keep variables in TelnetHandlers
 
 var localized string msg_login_incorrect;
+var localized string msg_login_timeout;
 var localized string msg_login_toomanyretries;
 var localized string msg_login_error;
 var localized string msg_login_noprivileges;
@@ -47,40 +53,28 @@ var localized string msg_unknowncommand;
 event Accepted()
 {
   local IpAddr addr;
-  if (DEBUG) log("[?] Creating UTelAdSE Spectator", 'UTelAdSE');
+
+  if (iVerbose > 1) log("[?] Creating UTelAdSE Spectator", 'UTelAdSE');
 	Spectator = Spawn(class'UTelAdSESpectator');
 	if (Spectator != None) 
   {
     Spectator.Server = self;
   }
+  Session = new(None) class'UTelAdSESession';
 
   // init vars
   GetLocalIP(addr);
   sIP = IpAddrToString(addr);
   sIP = Left(sIP, InStr(sIP, ":"));
-  bLoggedin = false;
-  bIgnoreInput = false;
   bEcho = true;
   iHistOffset = 0;
   bEscapeCode = false;
 
-  // don't echo - server: WILL ECHO
-  SendText(Chr(255)$Chr(251)$Chr(1));
-  // will supress go ahead
-  SendText(Chr(255)$Chr(251)$Chr(3));
+  gotostate('telnet_control');
 
-  if (bIssueMsg) 
-  {
-    SendLine(",------------------------------------------------------------");
-    SendLine("| "$Bold("Welcome to UTelAdSE version "$parent.VERSION));
-    SendLine("| Running on "$Bold(Level.Game.GameReplicationInfo.ServerName));
-    SendLine("| by Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>");
-    SendLine("| The Drunk Snipers               http://www.drunksnipers.com");
-    SendLine("`------------------------------------------------------------");
-  }
-  iLoginTries = 0;
-  // start login
-  SendLine("Username: ");
+  LinkMode = MODE_Binary;
+  ReceiveMode = RMODE_Manual;
+  procTelnetControl(); // process telnet controlls
 }
 
 event Closed()
@@ -90,17 +84,249 @@ event Closed()
 
 event Destroyed()
 {
+  Spectator.Destroy();
   if (IsConnected()) Close();
 }
 
-event ReceivedText( string Text )
+function procTelnetControl()
 {
-  local int c;
-  if (bIgnoreInput) return;
-  if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore 
-  // if controll char don't buffer
-  if (bLoggedin)
+  // don't echo - server: WILL ECHO
+  SendText(Chr(255)$Chr(251)$Chr(1));
+  // will supress go ahead
+  SendText(Chr(255)$Chr(251)$Chr(3));
+  // do terminal-type
+  SendText(Chr(255)$Chr(253)$Chr(24));
+  SendText(Chr(255)$Chr(250)$Chr(24)$Chr(1)$Chr(255)$Chr(240));
+  // do terminal size
+  SendText(Chr(255)$Chr(253)$Chr(31));
+
+  bTelnetGotSize = false;
+  bTelnetGotType = false;
+  fTelnetNegotiation = 0;
+  enable('Tick');
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Telnet negotiation
+///////////////////////////////////////////////////////////////////////////////
+state telnet_control {
+
+  // This is realy realy realy bad code
+  event Tick(float delta)
   {
+    local byte bCode[255];
+    local int i, j;
+    local string tmp;
+
+    fTelnetNegotiation += delta;
+
+    i = ReadBinary(255,bCode);
+    tmp = "";
+    for (j = 0; j < i; j++)
+    {
+      if (bCode[j] == 255) // IAC
+      {
+        j++;
+        if (bCode[j] == 250) // SB
+        {
+          j++;
+          switch (bCode[j])
+          {
+            case 31:  // term size
+                      session.setValue("TERM_WIDTH", string(bCode[j+1]*256+bCode[j+2]), true);
+                      session.setValue("TERM_HEIGHT", string(bCode[j+3]*256+bCode[j+4]), true);
+                      j = j+5;
+                      bTelnetGotSize = true;
+                      if (iVerbose > 1) log("[D] received term size:"@session.getValue("TERM_WIDTH")$"x"$session.getValue("TERM_HEIGHT"), 'UTelAdSE');
+                      break;
+            case 24:  // term type
+                      j += 2;
+                      tmp = "";
+                      while (bCode[j] != 255) 
+                      {
+                        tmp = tmp$Chr(bCode[j]);
+                        j++;
+                      }
+                      j--;
+                      bTelnetGotType = true;
+                      session.setValue("TERM_TYPE", tmp, true);
+                      if (iVerbose > 1) log("[D] received term type:"@tmp, 'UTelAdSE');
+                      break;
+          }
+        }
+      }
+    }
+    if ((bTelnetGotSize && bTelnetGotType) || (fTelnetNegotiation > TERM_NEGOTIATION))
+    {
+      disable('Tick');
+      LinkMode = MODE_Text;
+      ReceiveMode = RMODE_Event;
+      if (bIssueMsg) printIssueMessage();
+      iLoginTries = 0;
+      // start login
+      SendLine("Username: ");
+      gotostate('loggin_in');
+      SetTimer(fLoginTimeout,false);
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// State login fail, waiting for retry
+///////////////////////////////////////////////////////////////////////////////
+state login_fail {
+
+  // used to delay incorrect login
+  event Timer()
+  {
+    SendLine("Username: ");
+    gotostate('loggin_in');
+    SetTimer(fLoginTimeout,false);
+  }
+
+  event ReceivedText( string Text )
+  {
+    // do nothing
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// State client in loggin in
+///////////////////////////////////////////////////////////////////////////////
+state loggin_in {
+
+  // login timeout
+  event Timer()
+  {
+    SendLine(msg_login_timeout);
+    SendLine("");
+    Close();
+  }
+
+  event ReceivedText( string Text )
+  {
+    // fill buffer, while no go ahead (return)
+    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+    if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
+    if (InStr(Text, Chr(13)) == -1)
+    {
+      // perform backspace
+      if (Asc(Left(Text,1)) == 127)
+      {
+        if (inputBuffer != "") 
+        {
+          Text = Chr(8)$Chr(27)$"[K";
+          inputBuffer = Left(inputBuffer, Len(inputBuffer)-1);
+        }
+        else return;
+      }
+      else {
+        inputBuffer = inputBuffer$Text;
+      }
+      if (bEcho) SendText(Text);
+      return;
+    }
+    else {
+      if (bEcho) SendText(Text);
+      procLogin(inputBuffer);
+      inputBuffer = "";
+    }
+  }
+
+  //---------------------------------------------------------------------------
+  // Try to login
+  //---------------------------------------------------------------------------
+  function procLogin(string Text)
+  {
+    local string tmp;
+    if (sUsername == "") 
+    {
+      sUsername = Text;
+      SendLine("Password: ");
+      bEcho = false;
+      if (iVerbose > 1) Log("[D] UTelAdSE got username: "$sUsername, 'UTelAdSE');
+      if (sUsername == "") sUsername = Chr(127);
+    }
+    else {
+      sPassword = Text;
+      bEcho = true;
+      if (iVerbose > 1) Log("[D] UTelAdSE got password: *hidden*", 'UTelAdSE');
+      if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
+    	{
+        if (iVerbose > 0) Log("[~] UTelAdSE login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
+        SendLine("");
+        SendLine(msg_login_incorrect);
+        iLoginTries++;
+        if (iLoginTries >= 3)
+        {
+          SendLine(msg_login_toomanyretries);
+          Close();
+          return;
+        }
+    		sUsername = "";
+        sPassword = "";
+        SendLine("");
+        gotostate('login_fail');
+        SetTimer(fInvalidLoginDelay,false);
+    		return;
+    	}
+      else {
+        CurAdmin = Level.Game.AccessControl.GetLoggedAdmin(Spectator);
+        if (CurAdmin == none)
+        {
+          SendLine(msg_login_error);
+          Close();
+          return;
+        }
+        if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
+        {
+          SendLine(msg_login_noprivileges);
+          Close();
+          return;
+        }
+        if (spectator != none) {
+          spectator.PlayerReplicationInfo.PlayerName = sUsername;
+        }
+        // succesfull login
+        Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
+        if (iVerbose > 0) Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
+        if (parent.VersionNotification != "")
+        {
+          SendLine("");
+          SendLine(bold(parent.VersionNotification));
+        }
+        SendLine("");
+        tmp = msg_login_welcome;
+        ReplaceText(tmp, "%i", Bold(string(Parent.ConnectionCount)));
+        SendLine(tmp);
+        SendLine(msg_login_serverstatus);
+        inBuiltin("status");
+        SendLine("");
+        if (bStartChat) inBuiltin("togglechat");
+        SendPrompt();
+        gotostate('logged_in');
+        return;
+      }
+    }
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// State client logged in
+///////////////////////////////////////////////////////////////////////////////
+state logged_in {
+
+  event Timer()
+  {
+    // do nothing
+  }
+
+  event ReceivedText( string Text )
+  {
+    local int c;
+    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+
+    // if controll char don't buffer
     // ESC+key
     if (bEscapeCode)
     {
@@ -115,7 +341,9 @@ event ReceivedText( string Text )
         return;
       }
     }
+    // check first char for control chars
     c = Asc(Left(Text,1));
+    //                    CR          BS           ESC         TAB
     if ((c < 32) && (c != 13) && (c != 8) && (c != 27) && (c != 9))
     {
       if (inputBuffer == "")
@@ -196,124 +424,54 @@ event ReceivedText( string Text )
       }
       return;
     }
-  }
-  // fill buffer, while no go ahead (return)
-  if (InStr(Text, Chr(13)) == -1)
-  {
-    // perform backspace
-    if (Asc(Left(Text,1)) == 127)
+    
+    // fill buffer, while no go ahead (return)
+    if (InStr(Text, Chr(13)) == -1)
     {
-      if (inputBuffer != "") 
+      // perform backspace
+      if (Asc(Left(Text,1)) == 127)
       {
-        Text = Chr(8)$Chr(27)$"[K";
-        inputBuffer = Left(inputBuffer, Len(inputBuffer)-1);
+        if (inputBuffer != "") 
+        {
+          Text = Chr(8)$Chr(27)$"[K";
+          inputBuffer = Left(inputBuffer, Len(inputBuffer)-1);
+        }
+        else return;
       }
-      else return;
+      else {
+        inputBuffer = inputBuffer$Text;
+      }
+      if (bEcho) SendText(Text);
+      return;
     }
     else {
-      inputBuffer = inputBuffer$Text;
+      if (bEcho) SendText(Text);
+      procInput(inputBuffer);
+      inputBuffer = "";
     }
-    if (bEcho) SendText(Text);
-    return;
-  }
-  else {
-    if (bEcho) SendText(Text);
-    procInput(inputBuffer);
-    inputBuffer = "";
   }
 }
 
+//-----------------------------------------------------------------------------
+// Precess the input
+//-----------------------------------------------------------------------------
 // don't let QAPete catch you while reading this code he might think you are a nerd
 function procInput(string Text)
 {
   local bool result;
-  local string tmp;
-  // try to login
-  if (!bLoggedin)
+  addHistory(Text);
+  switch (Left(Text, 1))
   {
-    if (sUsername == "") 
-    {
-      sUsername = Text;
-      SendLine("Password: ");
-      bEcho = false;
-      if (DEBUG) Log("[D] UTelAdSE got username: "$sUsername, 'UTelAdSE');
-      if (sUsername == "") sUsername = Chr(127);
-    }
-    else {
-      sPassword = Text;
-      bEcho = true;
-      if (DEBUG) Log("[D] UTelAdSE got password: *hidden*", 'UTelAdSE');
-      if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
-    	{
-        Log("[~] UTelAdSE login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
-        SendLine("");
-        SendLine(msg_login_incorrect);
-        iLoginTries++;
-        if (iLoginTries >= 3)
-        {
-          SendLine(msg_login_toomanyretries);
-          Close();
-          return;
-        }
-    		sUsername = "";
-        sPassword = "";
-        SendLine("");
-        bIgnoreInput = true;
-        SetTimer(5.0,false);
-    		return;
-    	}
-      else {
-        CurAdmin = Level.Game.AccessControl.GetLoggedAdmin(Spectator);
-        if (CurAdmin == none)
-        {
-          SendLine(msg_login_error);
-          Close();
-          return;
-        }
-        if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
-        {
-          SendLine(msg_login_noprivileges);
-          Close();
-          return;
-        }
-        if (spectator != none) {
-          spectator.PlayerReplicationInfo.PlayerName = sUsername;
-        }
-        // succesfull login
-        Session = new(None) class'UTelAdSESession';
-        Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
-        Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
-        bLoggedin = true;
-        if (parent.VersionNotification != "")
-        {
-          SendLine("");
-          SendLine(bold(parent.VersionNotification));
-        }
-        SendLine("");
-        tmp = msg_login_welcome;
-        ReplaceText(tmp, "%i", Bold(string(Parent.ConnectionCount)));
-        SendLine(tmp);
-        SendLine(msg_login_serverstatus);
-        inBuiltin("status");
-        SendLine("");
-        if (bStartChat) inBuiltin("togglechat");
-        SendPrompt();
-        return;
-      }
-    }
+    case PREFIX_SAY     : result = inConsole("say "$Mid(Text, 1)); break;
+    case PREFIX_BUILTIN : result = inBuiltin(Mid(Text, 1)); break;
+    default : result = inConsole(Text); 
   }
-  else {   // start working
-    addHistory(Text);
-    switch (Left(Text, 1))
-    {
-      case PREFIX_SAY     : result = inConsole("say "$Mid(Text, 1)); break;
-      case PREFIX_BUILTIN : result = inBuiltin(Mid(Text, 1)); break;
-      default : result = inConsole(Text); 
-    }
-    if (result) SendPrompt();
-  }
+  if (result) SendPrompt();
 }
 
+//-----------------------------------------------------------------------------
+// Add a line to the history
+//-----------------------------------------------------------------------------
 function addHistory(string item)
 {
   if (item == "") return;
@@ -326,32 +484,33 @@ function addHistory(string item)
   }
 }
 
-// used to delay incorrect login
-event Timer()
-{
-  SendLine("Username: ");
-  bIgnoreInput = false;
-}
-
+//-----------------------------------------------------------------------------
 // send a line of text, will add a CR+LN to the beginning of the line
+//-----------------------------------------------------------------------------
 function SendLine(string text)
 {
   SendText(Chr(13)$Chr(10)$text);
 }
 
+//-----------------------------------------------------------------------------
 // send the command prompt
+//-----------------------------------------------------------------------------
 function SendPrompt()
 {
   SendLine(sUsername$"@"$sIP$"# ");
 }
 
-// make text show up bold
+//-----------------------------------------------------------------------------
+// Make the text bold
+//-----------------------------------------------------------------------------
 function string Bold(string text)
 {
   return Chr(27)$"[1m"$text$Chr(27)$"[0m";
 }
 
-// execute a console command
+//-----------------------------------------------------------------------------
+// Execute a console command
+//-----------------------------------------------------------------------------
 function bool inConsole(string command)
 {
   local string OutStr, args;
@@ -360,7 +519,7 @@ function bool inConsole(string command)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd console: "$command, 'UTelAdSE');
+  if (iVerbose > 1) log("[D] UTelAd console: "$command, 'UTelAdSE');
   // add `name` to say
   if (InStr(command, " ") > -1)
   {
@@ -379,6 +538,9 @@ function bool inConsole(string command)
   return true;
 }
 
+//-----------------------------------------------------------------------------
+// Execute builtin command
+//-----------------------------------------------------------------------------
 function bool inBuiltin(string command)
 {
   local array< string > args;
@@ -389,7 +551,7 @@ function bool inBuiltin(string command)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd buildin: "$command, 'UTelAdSE');
+  if (iVerbose > 1) log("[D] UTelAd buildin: "$command, 'UTelAdSE');
   Divide(command, " ", command, temp);
   Split(temp, " ", args);
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
@@ -401,6 +563,9 @@ function bool inBuiltin(string command)
   return true;
 }
 
+//-----------------------------------------------------------------------------
+// Handle short key
+//-----------------------------------------------------------------------------
 function bool inShortkey(int key)
 {
   local int hideprompt, i;
@@ -409,7 +574,7 @@ function bool inShortkey(int key)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd shortkey: "$key, 'UTelAdSE');
+  if (iVerbose > 1) log("[D] UTelAd shortkey: "$key, 'UTelAdSE');
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
 	{
 		if (Parent.TelnetHelpers[i].ExecShortKey(key, hideprompt, self))
@@ -418,6 +583,9 @@ function bool inShortkey(int key)
   return true;
 }
 
+//-----------------------------------------------------------------------------
+// Internal function for tabcompletion
+//-----------------------------------------------------------------------------
 function string GetCommonBegin(SortedStringArray slist)
 {
   local int i;
@@ -433,6 +601,9 @@ function string GetCommonBegin(SortedStringArray slist)
   return common;
 }
 
+//-----------------------------------------------------------------------------
+// Tab completion
+//-----------------------------------------------------------------------------
 function bool DoTabComplete()
 {
   local int i;
@@ -479,18 +650,37 @@ function bool DoTabComplete()
   SendText(inputbuffer);
 }
 
+//-----------------------------------------------------------------------------
+// Easter egg
+//-----------------------------------------------------------------------------
 function bool TempDoDopefish()
 {Level.ConsoleCommand("say Dopefish lives!");Level.ConsoleCommand("say DrSin get's eaten by the Dopefish");
 SendLine("           __"$Chr(13)$chr(10)$"         __)_\\___"$Chr(13)$chr(10)$" /(    /´      __`\\"$Chr(13)$chr(10)$"(  \\_/´   _   /  \\_I");
 SendLine(" \\       I `  \\_()O),"$Chr(13)$chr(10)$" /  _    I_/__..-.-.´"$Chr(13)$chr(10)$"(  / \\__   ´ `,I I I   Dopefish lives!");
 SendLine(" \\(   `\\I_____.'-'-'   http://www.dopefish.com"); inputbuffer="";SendPrompt(); return true;}
 
+//-----------------------------------------------------------------------------
+// Print issue message
+//-----------------------------------------------------------------------------
+function printIssueMessage()
+{
+  SendLine(",------------------------------------------------------------");
+  SendLine("| "$Bold("Welcome to UTelAdSE version "$parent.VERSION));
+  SendLine("| Running on "$Bold(Level.Game.GameReplicationInfo.ServerName));
+  SendLine("| by Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>");
+  SendLine("| The Drunk Snipers               http://www.drunksnipers.com");
+  SendLine("`------------------------------------------------------------");
+}
+
 defaultproperties
 {
   bIssueMsg=true
   bStartChat=false
+  fLoginTimeout=30.0
+  fInvalidLoginDelay=5.0
 
   msg_login_incorrect="Login incorrect."
+  msg_login_timeout="Login timeout"
   msg_login_toomanyretries="Too many tries, goodbye!"
   msg_login_error="Error during login."
   msg_login_noprivileges="You do not have enough privileges."

@@ -34,7 +34,7 @@ function string getValue(string name, optional string sdefault, optional out int
 
 // Set the value of a var name, if bAddIfNotExists it will be added when it doesn't exist
 // oldValue will have the previous value
-function bool setValue(string name, string value, bool bAddIfNotExists, optional out string oldValue)
+function bool setValue(string name, string value, optional bool bAddIfNotExists, optional out string oldValue)
 {
   local int i;
   for (i = 0; i<data.length; i++)
