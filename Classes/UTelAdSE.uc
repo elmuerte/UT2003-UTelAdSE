@@ -124,4 +124,5 @@ defaultproperties
      TelnetHelperClasses(0)=class'UTelAdSE.DefaultBuiltins'
      TelnetHelperClasses(1)=class'UTelAdSE.UserGroupAdmin'
      TelnetHelperClasses(2)=class'UTelAdSE.ServerBuiltins'
+     TelnetHelperClasses(3)=class'UTelAdSE.GameProfiles'
 }

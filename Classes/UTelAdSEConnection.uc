@@ -97,8 +97,12 @@ function procTelnetControl()
   // do terminal-type
   SendText(Chr(255)$Chr(253)$Chr(24));
   SendText(Chr(255)$Chr(250)$Chr(24)$Chr(1)$Chr(255)$Chr(240));
+  session.setValue("TERM_TYPE", "UNKNOWN", true);
   // do terminal size
   SendText(Chr(255)$Chr(253)$Chr(31));
+  // default
+  session.setValue("TERM_WIDTH", "80", true);
+  session.setValue("TERM_HEIGHT", "25", true);
 
   bTelnetGotSize = false;
   bTelnetGotType = false;

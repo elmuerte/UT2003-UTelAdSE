@@ -11,7 +11,7 @@ defaultproperties
 {
      LoadMsg="UTelAdSE Privileges Loaded"
      MainPrivs="T"
-     SubPrivs="Tl|Tc|Tb|Th|Ts|Tp"
+     SubPrivs="Tl|Tc|Tb|Th|Ts|Tp|Tg"
      Tags(0)="UTelAdSE"
      Tags(1)="Can login"
      Tags(2)="Use console"
@@ -19,4 +19,5 @@ defaultproperties
      Tags(4)="Use short-keys"
      Tags(5)="Use chat mode"
      Tags(6)="Player list"
+     Tags(7)="Game profiles"
 }
