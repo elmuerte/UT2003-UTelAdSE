@@ -19,7 +19,6 @@ var UTelAdSE parent; // parent, used to reuse the TelnetHelpers
 
 var string sUsername;
 var string sPassword;
-var string sIP; // server IP
 
 var xAdminUser CurAdmin;
 var UTelAdSESession Session; // session per connection, can be used to keep variables in TelnetHandlers
@@ -38,8 +37,6 @@ var localized string msg_noprivileges;
 //-----------------------------------------------------------------------------
 event Accepted()
 {
-  local IpAddr addr;
-
   if (iVerbose > 1) log("[?] Creating UTelAdSE Spectator", 'UTelAdSE');
 	Spectator = spawn(SpectatorClass);
 	if (Spectator != None) 
@@ -47,11 +44,6 @@ event Accepted()
     Spectator.Server = self;
   }
   Session = new(none) class'UTelAdSESession';
-
-  // init vars
-  GetLocalIP(addr);
-  sIP = IpAddrToString(addr);
-  sIP = Left(sIP, InStr(sIP, ":"));
 
   LinkMode = MODE_Binary;
   if (int(Level.EngineVersion) < 2175)
@@ -66,11 +58,13 @@ event Accepted()
 
 event Closed()
 {
+  if (iVerbose > 1) log("[D] Connection closed, destroying server peer...", 'UTelAdSE');
   Destroy();
 }
 
 event Destroyed()
 {
+  Level.Game.AccessControl.AdminLogout(Spectator);
   Spectator.Destroy();
   if (IsConnected()) Close();
 }
@@ -279,7 +273,11 @@ function bool inConsole(string command)
   {
     args = Mid(command, InStr(command, " ")+1);
     command = Left(command, InStr(command, " "));
-    if (Caps(command) == "SAY") args = sUsername$": "$args;
+    if (Caps(command) == "SAY") 
+    {
+      Level.Game.Broadcast(Spectator, args, 'Say');
+      return true;
+    }
     command = command$" "$args;
   }
   if ((Caps(command) == "EXIT") || (Caps(command) == "QUIT"))

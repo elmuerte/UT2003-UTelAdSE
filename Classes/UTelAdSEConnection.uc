@@ -610,7 +610,7 @@ function SendPrompt()
   if (!IsInState('auto_pager'))
   {
     iLinesDisplayed = 0;
-    SendLine(sUsername$"@"$sIP$"# ");
+    SendLine(sUsername$"@"$Parent.sIP$"# ");
   }
 }
 

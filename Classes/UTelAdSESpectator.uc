@@ -48,7 +48,6 @@ event ClientMessage( coerce string S, optional Name Type )
 
 function TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type)
 {
-  // we don't event get this do we ?
 	if (bMsgEnable)
   {
     Server.SendLine(FormatMessage(PRI, S, Type));
@@ -64,8 +63,6 @@ function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Swit
 {
   if (bMsgEnable)
   {
-  	Message.Static.ClientReceive( Self, Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject );
-    // filter localized messages
     if (class<GameMessage>(Message) != none)
     {
       Server.SendLine(Message.Static.GetString(Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject));

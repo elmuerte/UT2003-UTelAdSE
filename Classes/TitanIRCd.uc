@@ -9,6 +9,27 @@ class TitanIRCd extends UTelAdSE config;
 
 const IRCVERSION = "100";
 
+var string sChatChannel;
+
+struct IRCUser
+{
+  var string nickname;
+  var string hostname;
+  var string flag;
+  var PlayerController PC;
+};
+var array<IRCUser> IRCUsers;
+
+// do management here
+
+// keep list of clients
+
+event PreBeginPlay()
+{
+  Super.PreBeginPlay();
+  sChatChannel = "#"$sIP;
+}
+
 static function FillPlayInfo(PlayInfo PI)
 {
   PI.AddSetting("TitanIRCd", "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");

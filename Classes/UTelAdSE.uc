@@ -20,10 +20,28 @@ var config int iVerbose;
 var string VersionNotification;
 var int ConnectionCount;
 
+var string sIP;
+
+//-----------------------------------------------------------------------------
+// IPAddrToIp(IpAddr addr)
+//-----------------------------------------------------------------------------
+
+function string IPAddrToIp(IpAddr addr)
+{
+  local string tmp;
+  tmp = IpAddrToString(addr);
+  return Left(tmp, InStr(tmp, ":"));
+}
+
 // start Telnet server
 event PreBeginPlay()
 {
   local UTelAdSEVersion versioncheck;
+  local IpAddr addr;
+
+  GetLocalIP(addr);
+  sIP = IPAddrToIp(addr);
+
   if (iVerbose > 0) log("[~] Loading "$AppName$" version "$VERSION, 'UTelAdSE');
   if (iVerbose > 0) log("[~] Michiel 'El Muerte' Hendriks - elmuerte@drunksnipers.com", 'UTelAdSE');
   if (iVerbose > 0) log("[~] The Drunk Snipers - http://www.drunksnipers.com", 'UTelAdSE');
@@ -42,6 +60,7 @@ event PreBeginPlay()
   if (iVerbose > 0) log("[~] "$AppName$" Listing on: "$ListenPort, 'UTelAdSE');
 }
 
+// TODO: resource sharing
 function LoadTelnetHelpersEx()
 {
   local int i, j;
@@ -134,7 +153,4 @@ defaultproperties
   AcceptClass=Class'UTelAdSE.UTelAdSEConnection'
   CheckVersion=true
   iVerbose=1
-  TelnetHelperClasses(0)=class'UTelAdSE.DefaultBuiltins'
-  TelnetHelperClasses(1)=class'UTelAdSE.UserGroupAdmin'
-  TelnetHelperClasses(2)=class'UTelAdSE.ServerBuiltins'
 }
