@@ -544,7 +544,6 @@ state auto_pager extends logged_in {
 //-----------------------------------------------------------------------------
 // Precess the input
 //-----------------------------------------------------------------------------
-// don't let QAPete catch you while reading this code he might think you are a nerd
 function procInput(string Text)
 {
   local bool result;
@@ -680,7 +679,7 @@ function CLSR()
 }
 
 //-----------------------------------------------------------------------------
-// Clear the screen
+// Move the cursor to a specified location
 //-----------------------------------------------------------------------------
 function MoveCursor(int top, int left)
 {
@@ -802,7 +801,7 @@ function string GetCommonBegin(SortedStringArray slist)
   local int i;
   local string common, tmp2;
 
-  common = slist.GetItem(i);
+  common = slist.GetItem(0);
   for (i = 1; i < slist.Count(); i++)
   {
     tmp2 = slist.GetItem(i);
@@ -890,7 +889,7 @@ defaultproperties
   fLoginTimeout=30.0
   fInvalidLoginDelay=5.0
   bEnablePager=true
-  bAnnounceLogin=true
+  bAnnounceLogin=false
 
   msg_login_incorrect="Login incorrect."
   msg_login_timeout="Login timeout"
