@@ -167,6 +167,47 @@ function static string Colorise(string text, ETerm_color color, optional ETerm_c
   return Chr(27)$"["$string(int(color)+30)$";"$string(int(bgcolor)+40)$"m"$text$Chr(27)$"[0m";
 }
 
+//-----------------------------------------------------------------------------
+// These need to be merged to wUtils
+//-----------------------------------------------------------------------------
+
+function static string AlignLeft(coerce string line, int length, optional string padchar)
+{
+  local int i;
+  if (padchar == "") padchar = " ";
+  i = length-Len(line);
+  while (i > 0)
+  {
+    line = line$padchar;
+    i--;
+  }
+  if (i < 0) line = Left(line, length);
+  return line;
+}
+
+function static string AlignRight(coerce string line, int length, optional string padchar)
+{
+  local int i;
+  if (padchar == "") padchar = " ";
+  i = length-Len(line);
+  while (i > 0)
+  {
+    line = padchar$line;
+    i--;
+  }
+  if (i < 0) line = Right(line, length);
+  return line;
+}
+
+function static string AlignCenter(coerce string line, int length, optional string padchar)
+{
+  local int i, j;
+  if (padchar == "") padchar = " ";
+  i = Len(line)/2;
+  j = Len(line)-i;
+  return AlignRight(Left(line, i), length-(length/2), padchar)$AlignLeft(Right(line, j), length/2, padchar);
+}
+
 defaultproperties
 {
   msg_noprivileges="You do not have enough privileges."

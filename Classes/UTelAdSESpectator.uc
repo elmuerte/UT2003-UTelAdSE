@@ -77,7 +77,7 @@ function GameHasEnded() {}
 event PreClientTravel()
 {
   Server.SendLine("");
-  Server.SendLine(Chr(9)$msg_shutdownwarning);
+  Server.SendLine("        "$msg_shutdownwarning);
   Server.SendLine("");
 }
 

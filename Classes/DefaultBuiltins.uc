@@ -83,16 +83,16 @@ function SendStatus(UTelAdSEAccept connection)
   local string tmp;
   local Mutator M;
 
-  connection.SendLine("| "$msg_status_gametype$":"$Chr(9)$Chr(9)$Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1));
-  connection.SendLine("| "$msg_status_map$": "$Chr(9)$Chr(9)$Left(string(Level), InStr(string(Level), ".")));
+  connection.SendLine(AlignLeft("| "$msg_status_gametype$":", 20)@Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1));
+  connection.SendLine(AlignLeft("| "$msg_status_map$":", 20)@Left(string(Level), InStr(string(Level), ".")));
   for (M = Level.Game.BaseMutator.NextMutator; M != None; M = M.NextMutator) 
   {
     if (tmp != "") tmp = tmp$", ";
     tmp = tmp$(M.GetHumanReadableName());
   }
-  connection.SendLine("| "$msg_status_mutators$": "$Chr(9)$Chr(9)$tmp);
-  connection.SendLine("| "$msg_status_players$": "$Chr(9)$Level.Game.NumPlayers@msg_status_of@Level.Game.MaxPlayers);
-  connection.SendLine("| "$msg_status_spectators$": "$Chr(9)$Chr(9)$Level.Game.NumSpectators@msg_status_of@Level.Game.MaxSpectators);
+  connection.SendLine(AlignLeft("| "$msg_status_mutators$":", 20)@tmp);
+  connection.SendLine(AlignLeft("| "$msg_status_players$":", 20)@Level.Game.NumPlayers@msg_status_of@Level.Game.MaxPlayers);
+  connection.SendLine(AlignLeft("| "$msg_status_spectators$":", 20)@Level.Game.NumSpectators@msg_status_of@Level.Game.MaxSpectators);
 }
 
 function SendPlayers(UTelAdSEAccept connection)
@@ -120,7 +120,7 @@ function SendPlayers(UTelAdSEAccept connection)
     {
       IP = PlayerController(C).GetPlayerNetworkAddress();
 			IP = Left(IP, InStr(IP, ":"));
-			connection.SendLine("| "$msg_player@C.PlayerNum$":"$Chr(9)$PRI.PlayerName$Chr(9)$PRI.Score$Chr(9)$PRI.Ping$Chr(9)$IP);
+			connection.SendLine(AlignLeft("| "$msg_player, 6)@C.PlayerNum$":"@AlignLeft(PRI.PlayerName, 15)@AlignRight(PRI.Score, 4)@AlignRight(PRI.Ping, 5)@IP);
     }
   }
 }

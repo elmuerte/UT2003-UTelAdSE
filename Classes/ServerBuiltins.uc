@@ -288,8 +288,8 @@ function ExecMutator(array< string > args, UTelAdSEAccept connection)
         thisgroup = AllMutators[j].GroupName;
         k = AIncMutators.FindTagId(AllMutators[j].ClassName);
         if (lastgroup != thisgroup) connection.SendLine(strReplace(msg_mut_group, "%s", thisgroup));
-        if (k == -1) connection.SendLine(chr(9)$AllMutators[j].ClassName);
-          else connection.SendLine("!"$chr(9)$AllMutators[j].ClassName);
+        if (k == -1) connection.SendLine(AlignRight("",4)@AllMutators[j].ClassName);
+          else connection.SendLine(AlignRight("!",4)@AllMutators[j].ClassName);
 
         lastgroup = thisgroup;
       }
@@ -300,10 +300,10 @@ function ExecMutator(array< string > args, UTelAdSEAccept connection)
       {
         if (AllMutators[i].ClassName ~= FindMutator(args[0]))
         {
-          connection.SendLine(msg_mutator_name$": "$chr(9)$AllMutators[i].FriendlyName);
-          connection.SendLine(msg_mutator_class$": "$chr(9)$chr(9)$AllMutators[i].ClassName);
-          connection.SendLine(msg_mutator_group$": "$chr(9)$chr(9)$AllMutators[i].GroupName);
-          connection.SendLine(msg_mutator_description$": "$chr(9)$AllMutators[i].Description);
+          connection.SendLine(AlignLeft(msg_mutator_name$":", 15)@AllMutators[i].FriendlyName);
+          connection.SendLine(AlignLeft(msg_mutator_class$":", 15)@AllMutators[i].ClassName);
+          connection.SendLine(AlignLeft(msg_mutator_group$":", 15)@AllMutators[i].GroupName);
+          connection.SendLine(AlignLeft(msg_mutator_description$":", 15)@AllMutators[i].Description);
           break;
         }
       }
@@ -371,12 +371,12 @@ exec function ExecKick(array< string > args, UTelAdSEAccept connection)
 			// Get the list of players to kick by showing their PlayerID
 			// TODO: Display Fixed Playername (no garbage chars in name)?
 			// TODO: Display Sorted ?
-      Connection.SendLine("ID"$Chr(9)$"Spectator"$Chr(9)$"Name");
+      Connection.SendLine(AlignRight("ID", 3)@AlignLeft("Spectator", 10)@"Name");
 			Level.Game.GameReplicationInfo.GetPRIArray(AllPRI);
 			for (i = 0; i<AllPRI.Length; i++)
       {
         if (AllPRI[i].bBot == false)
-  				Connection.SendLine(Right("   "$AllPRI[i].PlayerID, 2)$Chr(9)$AllPRI[i].bIsSpectator$Chr(9)$Chr(9)$AllPRI[i].PlayerName);
+  				Connection.SendLine(AlignRight(AllPRI[i].PlayerID, 3)@AlignLeft(AllPRI[i].bIsSpectator, 10)@AllPRI[i].PlayerName);
       }
 			return;
 		}
@@ -951,7 +951,7 @@ function ExecGametype( array< string > args, UTelAdSEAccept connection)
     	{
         if (MaskedCompare(GamePI.Settings[i].SettingName, cmd))
         {                           // sec level                                                                                  // name                       // value (true value or datavalue ?)
-          connection.SendLine(Right("   "$GamePI.Settings[i].SecLevel,3)$") ["$Left(GamePI.Settings[i].Grouping$"           ", 11)$"]  "$GamePI.Settings[i].SettingName$" = "$RenderValue(GamePI.Settings[i].Value, GamePI.Settings[i].RenderType, GamePI.Settings[i].Data));
+          connection.SendLine(AlignRight(GamePI.Settings[i].SecLevel,3)$") ["$AlignLeft(GamePI.Settings[i].Grouping, 11)$"]"@GamePI.Settings[i].SettingName$" = "$RenderValue(GamePI.Settings[i].Value, GamePI.Settings[i].RenderType, GamePI.Settings[i].Data));
         }
       }
     }

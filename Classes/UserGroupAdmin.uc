@@ -197,7 +197,7 @@ function UserAdminList(UTelAdSEAccept connection)
       if (tmp != "") connection.SendLine(tmp);
       tmp = "";
     }
-    tmp = tmp$User.Username$Chr(9);
+    tmp = tmp$AlignLeft(User.Username, 15);
   }
   if (tmp != "") connection.SendLine(tmp);
 }
@@ -225,23 +225,23 @@ function UserAdminShow(array< string > args, UTelAdSEAccept connection)
     User = xAdminUser(Users.GetItem(i));
     if (User.Username == args[0])
     {
-      connection.SendLine(strReplace(msg_admin_show_username, "%s", User.UserName));
-      connection.SendLine(strReplace(msg_admin_show_privileges, "%s", User.Privileges));
-      connection.SendLine(strReplace(msg_admin_show_mergedprivileges, "%s", User.MergedPrivs));
-      connection.SendLine(strReplace(msg_admin_show_level, "%s", User.MaxSecLevel()));
+      connection.SendLine(AlignLeft(msg_admin_show_username, 25)@User.UserName);
+      connection.SendLine(AlignLeft(msg_admin_show_privileges, 25)@User.Privileges);
+      connection.SendLine(AlignLeft(msg_admin_show_mergedprivileges, 25)@User.MergedPrivs);
+      connection.SendLine(AlignLeft(msg_admin_show_level, 25)@User.MaxSecLevel());
       for (i = 0; i < User.Groups.Count(); i++)
       {
         if (tmp != "") tmp = tmp$", ";
         tmp = tmp$User.Groups.Get(i).GroupName;
       }
-      connection.SendLine(strReplace(msg_admin_show_ingroups, "%s", tmp));
+      connection.SendLine(AlignLeft(msg_admin_show_ingroups, 25)@tmp);
       tmp = "";
       for (i = 0; i < User.ManagedGroups.Count(); i++)
       {
         if (tmp != "") tmp = tmp$", ";
         tmp = tmp$User.ManagedGroups.Get(i).GroupName;
       }
-      connection.SendLine(strReplace(msg_admin_show_mangroups, "%s", tmp));
+      connection.SendLine(AlignLeft(msg_admin_show_mangroups, 25)@tmp);
       return;
     }
   }
@@ -541,7 +541,7 @@ function GroupAdminList(UTelAdSEAccept connection)
       if (tmp != "") connection.SendLine(tmp);
       tmp = "";
     }
-    tmp = tmp$Group.Groupname$Chr(9);
+    tmp = tmp$AlignLeft(Group.Groupname, 15);
   }
   if (tmp != "") connection.SendLine(tmp);
 }
@@ -572,22 +572,22 @@ function GroupAdminShow(array< string > args, UTelAdSEAccept connection)
   if (Group != none)
   {
     
-    connection.SendLine(strReplace(msg_group_show_name, "%s", Group.GroupName));
-    connection.SendLine(strReplace(msg_group_show_privs, "%s", Group.Privileges));
-    connection.SendLine(strReplace(msg_group_show_level, "%s", Group.GameSecLevel));
+    connection.SendLine(AlignLeft(msg_group_show_name, 25)@Group.GroupName);
+    connection.SendLine(AlignLeft(msg_group_show_privs, 25)@Group.Privileges);
+    connection.SendLine(AlignLeft(msg_group_show_level, 25)@Group.GameSecLevel);
     for (i = 0; i < Group.Users.Count(); i++)
     {
       if (tmp != "") tmp = tmp$", ";
       tmp = tmp$Group.Users.Get(i).UserName;
     }
-    connection.SendLine(strReplace(msg_group_show_users, "%s", tmp));
+    connection.SendLine(AlignLeft(msg_group_show_users, 25)@tmp);
     tmp = "";
     for (i = 0; i < Group.Managers.Count(); i++)
     {
       if (tmp != "") tmp = tmp$", ";
       tmp = tmp$Group.Managers.Get(i).UserName;
     }
-    connection.SendLine(strReplace(msg_group_show_managers, "%s", tmp));
+    connection.SendLine(AlignLeft(msg_group_show_managers, 25)@tmp);
     return;
     
   }
@@ -770,12 +770,12 @@ defaultproperties
   msg_admin_addedtomgroup="Added user as manager for group '%s'"
   msg_admin_removedfrommgroup="Removed user as manager for group '%s'"
   msg_admin_updatedprivs="Updated user privileges"
-  msg_admin_show_username="| Username:           %s"
-  msg_admin_show_privileges="| Privileges:         %s"
-  msg_admin_show_mergedprivileges="| Merged Privileges:  %s"
-  msg_admin_show_level="| Max Security Level: %s"
-  msg_admin_show_ingroups="| In groups:          %s"
-  msg_admin_show_mangroups="| Can manage groups:  %s"
+  msg_admin_show_username="| Username:"
+  msg_admin_show_privileges="| Privileges:"
+  msg_admin_show_mergedprivileges="| Merged Privileges:"
+  msg_admin_show_level="| Max Security Level:"
+  msg_admin_show_ingroups="| In groups:"
+  msg_admin_show_mangroups="| Can manage groups:"
 
   msg_group_nogroups="There are no groups to list"
   msg_group_groups="Groups:"
@@ -789,9 +789,9 @@ defaultproperties
   msg_group_removedgroup="Group '%s' was removed"
   msg_group_updatedseclevel="Updated group security level"
   msg_group_updatedprivs="Updated group privileges"
-  msg_group_show_name="| Group nane:          %s"
-  msg_group_show_privs="| Privileges:          %s"
-  msg_group_show_level="| Security Level:      %s"
-  msg_group_show_users="| Users in this group: %s"
-  msg_group_show_managers="| Managers:            %s"
+  msg_group_show_name="| Group nane:"
+  msg_group_show_privs="| Privileges:"
+  msg_group_show_level="| Security Level:"
+  msg_group_show_users="| Users in this group:"
+  msg_group_show_managers="| Managers:"
 }
