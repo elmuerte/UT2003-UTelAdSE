@@ -18,6 +18,7 @@ struct IRCUser
   var string nickname;
   var string hostname;
   var string flag;
+  var string oldname;
   var PlayerController PC;
 };
 var array<IRCUser> IRCUsers;
@@ -106,6 +107,7 @@ function int AddUserPlayerList(string nickname, string host, PlayerController P,
   IRCUsers[i].nickname = nickname;
   IRCUsers[i].hostname = host;
   IRCUsers[i].PC = P;
+  IRCUsers[i].oldname = P.PlayerReplicationInfo.PlayerName;
   if (!P.PlayerReplicationInfo.bBot)
   {
     if (P.PlayerReplicationInfo.bAdmin) IRCUsers[i].Flag = "@";
@@ -167,7 +169,8 @@ function string getPlayerHost(PlayerController P)
   local string host;
 
   host = P.GetPlayerNetworkAddress();
-  Left(host, InStr(host, ":"));
+  log("------>"@host);
+  host = Left(host, InStr(host, ":"));
   if (host == "") host = "serverhost";
   return Mid(P, InStr(P, ".")+1)$"@"$host;
 }

@@ -19,11 +19,20 @@ function string getPlayerHostByPRI(PlayerReplicationInfo PRI)
 {
   local int i;
   local PlayerController P;
+  local string old;
 
   for (i = 0; i < IRCClient.IRCd.IRCUsers.length; i++)
   {
   	if (IRCClient.IRCd.IRCUsers[i].PC.PlayerReplicationInfo == PRI)
     {
+      if (IRCClient.IRCd.IRCUsers[i].OldName != PRI.PlayerName) 
+      {
+        // change name
+        IRCClient.IRCd.IRCUsers[i].OldName = PRI.PlayerName;
+        old = IRCClient.IRCd.IRCUsers[i].Nickname;
+        IRCClient.IRCd.IRCUsers[i].Nickname = IRCClient.IRCd.getNickName(IRCClient.IRCd.IRCUsers[i].PC.PlayerReplicationInfo.PlayerName, IRCClient.IRCd.IRCUsers[i].PC);
+        IRCClient.SendRaw(":"$old$" NICK "$IRCClient.IRCd.IRCUsers[i].Nickname);
+      }
       return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].Hostname;
     }
   }
@@ -70,7 +79,7 @@ function TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type)
 
 event PreClientTravel()
 {
-  IRCClient.SendLine(msg_shutdownwarning); // FIXME: notice
+  IRCClient.SendRaw(":"$IRCClient.IRCd.sIP@"NOTICE &"$IRCClient.sUsername@":"$msg_shutdownwarning); // FIXME: notice
 }
 
 function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )
@@ -84,9 +93,8 @@ function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Swit
         case 1: // new player joined
                 if (RelatedPRI_1 != none) getPlayerHostByPRI(RelatedPRI_1);
                 break;
-        case 2: // name change
-                log("name change");
-                if (RelatedPRI_1 != none) IRCClient.SendRaw(":"$RelatedPRI_1.OldName$" NICK "$RelatedPRI_1.PlayerName);
+        case 2: // name change - we never receive this :(
+                //if (RelatedPRI_1 != none) IRCClient.SendRaw(":"$RelatedPRI_1.OldName$" NICK "$RelatedPRI_1.PlayerName);
                 break;
         case 4: // left the server
                 if (RelatedPRI_1 != none) IRCClient.IRCd.RemoveUserPlayerList(getPlayerByPRI(RelatedPRI_1), "Left the server");
