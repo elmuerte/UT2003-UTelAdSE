@@ -1,16 +1,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    UTelAdSE.uc
-// version:     102
+// version:     103
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     connection acceptng class for UTelAdSE
 ///////////////////////////////////////////////////////////////////////////////
 
 class UTelAdSE extends TcpLink config;
 
-const VERSION = "102";
+const VERSION = "103";
 
 var string AppName;
 
+var config bool bEnabled;
 var config int ListenPort;
 var config int MaxConnections;
 var array<UTelAdSEHelper> TelnetHelpers;
@@ -38,6 +39,8 @@ event PreBeginPlay()
 {
   local UTelAdSEVersion versioncheck;
   local IpAddr addr;
+
+  if (!bEnabled) return;
 
   GetLocalIP(addr);
   sIP = IPAddrToIp(addr);
@@ -138,15 +141,16 @@ event LostChild( Actor C )
 
 static function FillPlayInfo(PlayInfo PI)
 {
-  PI.AddSetting("UTelAdSE", "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");
-  PI.AddSetting("UTelAdSE", "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;0:255");
-  PI.AddClass(class'UTelAdSEConnection');
-  class'UTelAdSEConnection'.static.FillPlayInfo(PI);
-	PI.PopClass();
+  Super.FillPlayInfo(PI);
+  PI.AddSetting(Default.AppName, "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");
+  PI.AddSetting(Default.AppName, "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;0:255");
+  //class'UTelAdSEConnection'.static.FillPlayInfo(PI);
+  Default.AcceptClass.static.FillPlayInfo(PI);
 }
 
 defaultproperties
 {
+  bEnabled=true
   AppName="UTelAdSE"
   ListenPort=7776
   MaxConnections=10

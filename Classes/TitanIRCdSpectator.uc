@@ -90,7 +90,7 @@ function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Swit
       switch (switch)
       {
         case 1: // new player joined
-                if (RelatedPRI_1 != none) getPlayerHostByPRI(RelatedPRI_1);
+                if (RelatedPRI_1 != none) getPlayerHostByPRI(RelatedPRI_1); // FIXME: fails, but why
                 break;
         case 2: // name change - we never receive this :(
                 //if (RelatedPRI_1 != none) IRCClient.SendRaw(":"$RelatedPRI_1.OldName$" NICK "$RelatedPRI_1.PlayerName);

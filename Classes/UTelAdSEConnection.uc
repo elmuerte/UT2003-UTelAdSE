@@ -727,13 +727,12 @@ function printIssueMessage()
 //-----------------------------------------------------------------------------
 static function FillPlayInfo(PlayInfo PI)
 {
+  Super.FillPlayInfo(PI);
   PI.AddSetting("UTelAdSE", "bAnnounceLogin", "Announce login", 255, 3, "check");
   PI.AddSetting("UTelAdSE", "bIssueMsg", "Show login banner", 255, 4, "check");
   PI.AddSetting("UTelAdSE", "bStartChat", "Start in Chat mode", 255, 5, "check");
   PI.AddSetting("UTelAdSE", "fLoginTimeout", "Login timeout", 255, 6, "text");
   PI.AddSetting("UTelAdSE", "fInvalidLoginDelay", "Invalid login delay", 255, 5, "text");
-  // call connection shit
-	PI.PopClass();
 }
 
 defaultproperties

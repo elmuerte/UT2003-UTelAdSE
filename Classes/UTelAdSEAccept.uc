@@ -430,7 +430,7 @@ function releaseSTDIN()
 //-----------------------------------------------------------------------------
 static function FillPlayInfo(PlayInfo PI)
 {
-	PI.PopClass();
+	Super.FillPlayInfo(PI);
 }
 
 defaultproperties 

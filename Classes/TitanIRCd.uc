@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    TitanIRCd.uc
-// version:     100
+// version:     101
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     IRC server running on the UTelAdSE system
 ///////////////////////////////////////////////////////////////////////////////
 
 class TitanIRCd extends UTelAdSE config;
 
-const IRCVERSION = "100";
+const IRCVERSION = "101";
 
 var string sName;
 var string sChatChannel;
@@ -29,6 +29,8 @@ var array<TitanIRCdConnection> IRCCLients;
 
 event PreBeginPlay()
 {
+  if (!bEnabled) return;
+
   sCreateTime = class'wTime'.static.date("hh:nn:ss dd-mm-yyyy", Level.Year, Level.Month, Level.Day, Level.Hour, Level.Minute, Level.Second);
   Super.PreBeginPlay();
   if (Level.Game.GameReplicationInfo.ShortName != "") sChatChannel = "#"$fixName(Left(Level.Game.GameReplicationInfo.ShortName, 10));
@@ -62,11 +64,7 @@ event LostChild( Actor C )
 
 static function FillPlayInfo(PlayInfo PI)
 {
-  PI.AddSetting("TitanIRCd", "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");
-  PI.AddSetting("TitanIRCd", "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;0:255");
-  PI.AddClass(class'TitanIRCdConnection');
-  class'TitanIRCdConnection'.static.FillPlayInfo(PI);
-	PI.PopClass();
+  Super.FillPlayInfo(PI);
 }
 
 
@@ -172,7 +170,6 @@ function string getPlayerHost(PlayerController P)
   local string host;
 
   host = P.GetPlayerNetworkAddress();
-  log("------>"@host);
   host = Left(host, InStr(host, ":"));
   if (host == "") host = "serverhost";
   return Mid(P, InStr(P, ".")+1)$"@"$host;
