@@ -20,6 +20,8 @@ var globalconfig bool bIssueMsg;
 var globalconfig bool bStartChat;
 var globalconfig float fLoginTimeout;
 var globalconfig float fInvalidLoginDelay;
+var globalconfig bool bEnablePager;
+
 var int iVerbose;
 
 var UTelAdSESpectator Spectator; // message spectator
@@ -35,6 +37,9 @@ var string inputBuffer;
 var bool bEcho; // echo the input characters
 var bool bEscapeCode; // working on an escape code
 
+var int iLinesDisplayed; // used for the pager
+var array<string> pagerBuffer; // pager buffer
+
 var bool bTelnetGotType, bTelnetGotSize;
 var float fTelnetNegotiation;
 
@@ -49,6 +54,7 @@ var localized string msg_login_noprivileges;
 var localized string msg_login_welcome;
 var localized string msg_login_serverstatus;
 var localized string msg_unknowncommand;
+var localized string msg_pager;
 
 // STDIN\STDOUT handlers
 var UTelAdSEHelper STDIN, STDOUT;
@@ -476,6 +482,35 @@ state steal_stdin extends logged_in {
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// State pager
+///////////////////////////////////////////////////////////////////////////////
+
+state auto_pager extends logged_in {
+
+  event ReceivedText( string Text )
+  {
+    local int i;
+    if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
+    if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
+
+    for (i = 0; (pagerBuffer.Length > 0) && (i < int(session.getValue("TERM_HEIGHT", "9999"))); i++)
+    {
+      SendText(pagerBuffer[0]);
+      pagerBuffer.remove(0,1);
+    }
+    if (pagerBuffer.Length == 0)
+    {
+      gotostate('logged_in');
+      SendPrompt();
+    }
+    else {
+      SendText(Chr(13)$Chr(10)$msg_pager);
+    }
+  }
+}
+
+
 //-----------------------------------------------------------------------------
 // Precess the input
 //-----------------------------------------------------------------------------
@@ -513,6 +548,22 @@ function addHistory(string item)
 //-----------------------------------------------------------------------------
 function SendLine(string text)
 {
+  if ((STDIN == none) && (!IsInState('loggin_in')))
+  {
+    iLinesDisplayed++;
+    if (iLinesDisplayed > int(session.getValue("TERM_HEIGHT", "9999")) && bEnablePager)
+    {
+      pagerBuffer.length = pagerBuffer.length+1;
+      pagerBuffer[pagerBuffer.length-1] = Chr(13)$Chr(10)$text;
+      if (!IsInState('auto_pager'))
+      {
+        SendText(Chr(13)$Chr(10)$msg_pager);
+        if (iVerbose > 1) log("[D] enable pager", 'UTelAdSE');
+        gotostate('auto_pager');
+      }
+      return;
+    }
+  }
   SendText(Chr(13)$Chr(10)$text);
 }
 
@@ -521,7 +572,11 @@ function SendLine(string text)
 //-----------------------------------------------------------------------------
 function SendPrompt()
 {
-  SendLine(sUsername$"@"$sIP$"# ");
+  if (!IsInState('auto_pager'))
+  {
+    iLinesDisplayed = 0;
+    SendLine(sUsername$"@"$sIP$"# ");
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -723,6 +778,7 @@ defaultproperties
   bStartChat=false
   fLoginTimeout=30.0
   fInvalidLoginDelay=5.0
+  bEnablePager=true
 
   msg_login_incorrect="Login incorrect."
   msg_login_timeout="Login timeout"
@@ -732,4 +788,6 @@ defaultproperties
   msg_login_welcome="There are %i clients logged in"
   msg_login_serverstatus="Server status:"
   msg_unknowncommand="Unknown command"
+
+  msg_pager="-- Press any key to continue --"
 }
