@@ -29,7 +29,7 @@ function bool Init()
   return true;
 }
 
-function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEAccept connection)
 {
   switch (command)
   {
@@ -41,7 +41,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
   }
 }
 
-function bool ExecShortkey(int key, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecShortkey(int key, out int hideprompt, UTelAdSEAccept connection)
 {
   local array< string > null;
   switch (key)
@@ -54,7 +54,7 @@ function bool ExecShortkey(int key, out int hideprompt, UTelAdSEConnection conne
   return false;
 }
 
-function ToggleChat(UTelAdSEConnection connection)
+function ToggleChat(UTelAdSEAccept connection)
 {
   if (!Level.Game.AccessControl.CanPerform(connection.Spectator, "Ts"))
   {
@@ -71,13 +71,14 @@ function ToggleChat(UTelAdSEConnection connection)
   }
 }
 
-function TogglePager(UTelAdSEConnection connection)
+function TogglePager(UTelAdSEAccept connection)
 {
-  connection.bEnablePager = !connection.bEnablePager;
-  connection.SendLine(msg_pager_status@connection.bEnablePager);
+  if (UTelAdSEConnection(connection) == none) return;
+  UTelAdSEConnection(connection).bEnablePager = !UTelAdSEConnection(connection).bEnablePager;
+  connection.SendLine(msg_pager_status@UTelAdSEConnection(connection).bEnablePager);
 }
 
-function SendStatus(UTelAdSEConnection connection)
+function SendStatus(UTelAdSEAccept connection)
 {
   local string tmp;
   local Mutator M;
@@ -94,7 +95,7 @@ function SendStatus(UTelAdSEConnection connection)
   connection.SendLine("| "$msg_status_spectators$": "$Chr(9)$Chr(9)$Level.Game.NumSpectators@msg_status_of@Level.Game.MaxSpectators);
 }
 
-function SendPlayers(UTelAdSEConnection connection)
+function SendPlayers(UTelAdSEAccept connection)
 {
 	local Controller C;
 	local PlayerReplicationInfo PRI;

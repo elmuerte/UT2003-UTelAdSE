@@ -61,7 +61,7 @@ function bool Init()
   return false;
 }
 
-function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEAccept connection)
 {
   switch (command)
   {
@@ -73,7 +73,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
 
 // SHOW Privileges
 
-function ShowPrivileges(array< string > args, UTelAdSEConnection connection)
+function ShowPrivileges(array< string > args, UTelAdSEAccept connection)
 {
   local int i,pi;
   local xPrivilegeBase PM;
@@ -119,7 +119,7 @@ function ShowPrivileges(array< string > args, UTelAdSEConnection connection)
 
 // USER ADMIN stuff
 
-function ObjectArray ManagedUsers(UTelAdSEConnection connection)
+function ObjectArray ManagedUsers(UTelAdSEAccept connection)
 {
   local ObjectArray Users;
   local int i, j;
@@ -147,7 +147,7 @@ function ObjectArray ManagedUsers(UTelAdSEConnection connection)
 	return Users;
 }
 
-function UserAdmin(array< string > args, UTelAdSEConnection connection)
+function UserAdmin(array< string > args, UTelAdSEAccept connection)
 {
   local string command;
   if (!Level.Game.AccessControl.CanPerform(connection.Spectator, "A"))
@@ -171,7 +171,7 @@ function UserAdmin(array< string > args, UTelAdSEConnection connection)
 }
 
 // show all users
-function UserAdminList(UTelAdSEConnection connection)
+function UserAdminList(UTelAdSEAccept connection)
 {
   local ObjectArray	Users;
   local xAdminUser User;
@@ -203,7 +203,7 @@ function UserAdminList(UTelAdSEConnection connection)
 }
 
 // show user information
-function UserAdminShow(array< string > args, UTelAdSEConnection connection)
+function UserAdminShow(array< string > args, UTelAdSEAccept connection)
 {
   local ObjectArray	Users;
   local xAdminUser User;
@@ -249,7 +249,7 @@ function UserAdminShow(array< string > args, UTelAdSEConnection connection)
 }
 
 // add a new user
-function UserAdminAdd(array< string > args, UTelAdSEConnection connection)
+function UserAdminAdd(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminUser User;
   local xAdminGroup Group;
@@ -311,7 +311,7 @@ function UserAdminAdd(array< string > args, UTelAdSEConnection connection)
   connection.SendLine(msg_usage@PREFIX_BUILTIN$"user add <name> <password> <group> [privileges]");
 }
 
-function UserAdminRemove(array< string > args, UTelAdSEConnection connection)
+function UserAdminRemove(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminUser User;
   if (!Level.Game.AccessControl.CanPerform(connection.Spectator, "Aa"))
@@ -337,7 +337,7 @@ function UserAdminRemove(array< string > args, UTelAdSEConnection connection)
 		connection.SendLine(msg_admin_noname);
 }
 
-function UserAdminSet(array< string > args, UTelAdSEConnection connection)
+function UserAdminSet(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminUser User;
   local xAdminGroup Group;
@@ -451,7 +451,7 @@ function UserAdminSet(array< string > args, UTelAdSEConnection connection)
 		connection.SendLine(msg_admin_noname);
 }
 
-function UserShowLoggegin(UTelAdSEConnection connection)
+function UserShowLoggegin(UTelAdSEAccept connection)
 {
   local ObjectArray	Users;
   local xAdminUser User;
@@ -488,7 +488,7 @@ function UserShowLoggegin(UTelAdSEConnection connection)
 
 // GROUP ADMIN stuff
 
-function GroupAdmin(array< string > args, UTelAdSEConnection connection)
+function GroupAdmin(array< string > args, UTelAdSEAccept connection)
 {
   local string command;
   if (!Level.Game.AccessControl.CanPerform(connection.Spectator, "G"))
@@ -511,7 +511,7 @@ function GroupAdmin(array< string > args, UTelAdSEConnection connection)
 }
 
 // show all users
-function GroupAdminList(UTelAdSEConnection connection)
+function GroupAdminList(UTelAdSEAccept connection)
 {
   local xAdminGroup Group;
   local xAdminGroupList Groups;
@@ -547,7 +547,7 @@ function GroupAdminList(UTelAdSEConnection connection)
 }
 
 // show group info
-function GroupAdminShow(array< string > args, UTelAdSEConnection connection)
+function GroupAdminShow(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminGroup Group;
   local xAdminGroupList Groups;
@@ -594,7 +594,7 @@ function GroupAdminShow(array< string > args, UTelAdSEConnection connection)
   connection.SendLine(msg_group_nogroup); 
 }
 
-function GroupAdminAdd(array< string > args, UTelAdSEConnection connection)
+function GroupAdminAdd(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminGroup Group;
   local string newgroup, newprivs;
@@ -648,7 +648,7 @@ function GroupAdminAdd(array< string > args, UTelAdSEConnection connection)
   connection.SendLine(msg_usage@PREFIX_BUILTIN$"group add <name> <security level> [privileges]");
 }
 
-function GroupAdminRemove(array< string > args, UTelAdSEConnection connection)
+function GroupAdminRemove(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminGroup Group;
   if (!Level.Game.AccessControl.CanPerform(connection.Spectator, "Ga"))
@@ -674,7 +674,7 @@ function GroupAdminRemove(array< string > args, UTelAdSEConnection connection)
 		connection.SendLine(msg_group_nogroup);
 }
 
-function GroupAdminSet(array< string > args, UTelAdSEConnection connection)
+function GroupAdminSet(array< string > args, UTelAdSEAccept connection)
 {
   local xAdminGroup Group;
   local int temp;

@@ -36,7 +36,7 @@ function bool Init()
 //            args = the arguments given with the command, if any
 //            output variable: hideprompt != 0 -> don't show prompt
 //            connection = the connection calling this function
-function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEAccept connection)
 {
   return false;
 }
@@ -46,7 +46,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
 // input:     key = ASCII value of the short-key entered
 //            output variable: hideprompt != 0 -> don't show prompt
 //            connection = the connection calling this function
-function bool ExecShortkey(int key, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecShortkey(int key, out int hideprompt, UTelAdSEAccept connection)
 {
   return false;
 }
@@ -63,19 +63,19 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
 // function:  Custom Input handler
 // input:     Text = received input
 //            connection = the connection to handle
-function HandleInput(string Text, UTelAdSEConnection connection)
+function HandleInput(string Text, UTelAdSEAccept connection)
 {
 }
 
 // function:  Do stuff when a client logs in
-function OnLogin(UTelAdSEConnection connection)
+function OnLogin(UTelAdSEAccept connection)
 {
 }
 
 // function:  Do stuff when a client logs out
 // output:    set canlogout to a non zero value when the user can't logout
 //            messages is the messages to be displayed on logout
-function OnLogout(UTelAdSEConnection connection, out int canlogout, out array<string> messages)
+function OnLogout(UTelAdSEAccept connection, out int canlogout, out array<string> messages)
 {
 }
 

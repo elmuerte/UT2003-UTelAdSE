@@ -9,11 +9,9 @@
 //              .         shortcut for `say`
 ///////////////////////////////////////////////////////////////////////////////
 
-class UTelAdSEConnection extends TcpLink config;
+class UTelAdSEConnection extends UTelAdSEAccept config;
 
 const MAXHISTSIZE = 20; // size of the history
-const PREFIX_BUILTIN = "/";
-const PREFIX_SAY = ".";
 const TERM_NEGOTIATION = 1.0; // telnet negotiation timeout, in seconds
 
 // telnet protocol
@@ -30,25 +28,16 @@ const O_SGOAHEAD  = 3;
 const O_TERMINAL  = 24;
 const O_WSIZE     = 31;
 
-var globalconfig bool bIssueMsg;
-var globalconfig bool bStartChat;
-var globalconfig float fLoginTimeout;
-var globalconfig float fInvalidLoginDelay;
-var globalconfig bool bEnablePager;
-var globalconfig bool bAnnounceLogin;
+var config bool bIssueMsg;
+var config bool bStartChat;
+var config float fInvalidLoginDelay;
+var config bool bEnablePager;
+var config bool bAnnounceLogin;
 
-var int iVerbose;
-
-var UTelAdSESpectator Spectator; // message spectator
-var UTelAdSE parent; // parent, used to reuse the TelnetHelpers
-var string sUsername;
-var private string sPassword;
 var private int iLoginTries;
-var string sIP; // server IP
 
 var private array<string> history; // array with command history
 var private int iHistOffset; // current offset in the history
-var string inputBuffer; 
 var bool bEcho; // echo the input characters
 var private bool bEscapeCode; // working on an escape code
 
@@ -58,72 +47,28 @@ var array<string> pagerBuffer; // pager buffer
 var bool bTelnetGotType, bTelnetGotSize;
 var private float fTelnetNegotiation;
 
-var xAdminUser CurAdmin;
-var UTelAdSESession Session; // session per connection, can be used to keep variables in TelnetHandlers
-
 var localized string msg_login_incorrect;
-var localized string msg_login_timeout;
 var localized string msg_login_toomanyretries;
 var localized string msg_login_error;
-var localized string msg_login_noprivileges;
 var localized string msg_login_welcome;
 var localized string msg_login_serverstatus;
-var localized string msg_unknowncommand;
 var localized string msg_pager;
-var localized string msg_goodbye;
-var localized string msg_shutdownwarning;
-
-var UTelAdSEHelper STDIN; // active STDIN handlers
 
 //-----------------------------------------------------------------------------
 // Socket accepted start working
 //-----------------------------------------------------------------------------
 event Accepted()
 {
-  local IpAddr addr;
-
-  if (iVerbose > 1) log("[?] Creating UTelAdSE Spectator", 'UTelAdSE');
-	Spectator = Spawn(class'UTelAdSESpectator');
-	if (Spectator != None) 
-  {
-    Spectator.Server = self;
-  }
-  Session = new(None) class'UTelAdSESession';
-
-  // init vars
-  GetLocalIP(addr);
-  sIP = IpAddrToString(addr);
-  sIP = Left(sIP, InStr(sIP, ":"));
   bEcho = true;
   iHistOffset = 0;
   bEscapeCode = false;
-
-  LinkMode = MODE_Binary;
-  if (int(Level.EngineVersion) < 2175)
-  {
-    gotostate('telnet_control');
-    // ReceiveBinary is broken
-    if (iVerbose > 1) log("[D] Unreal engine version below 2175, switch to RMODE_Manual", 'UTelAdSE');
-    ReceiveMode = RMODE_Manual;
-  }
-  startTelnetControl(); // process telnet controlls
-}
-
-event Closed()
-{
-  Destroy();
-}
-
-event Destroyed()
-{
-  Spectator.Destroy();
-  if (IsConnected()) Close();
+  Super.Accepted();
 }
 
 //-----------------------------------------------------------------------------
 // Initial Telnet Control handshaking
 //-----------------------------------------------------------------------------
-function startTelnetControl()
+function startInitialize()
 {
   // don't echo - server: WILL ECHO
   SendText(Chr(T_IAC)$Chr(T_WILL)$Chr(O_ECHO));
@@ -162,9 +107,8 @@ function StartLogin()
   if (bIssueMsg) printIssueMessage();
   iLoginTries = 0;
   // start login
-  gotostate('loggin_in');
+  super.StartLogin();
   SendLine("Username: ");
-  SetTimer(fLoginTimeout,false);
 }
 
 //-----------------------------------------------------------------------------
@@ -236,7 +180,7 @@ function procTelnetControl(int Count, byte B[255])
 ///////////////////////////////////////////////////////////////////////////////
 // Telnet negotiation
 ///////////////////////////////////////////////////////////////////////////////
-state telnet_control {  
+state initialize {  
 
   function oldProcTelnetControl(int Count, byte B[255])
   {
@@ -286,26 +230,12 @@ state login_fail {
     gotostate('loggin_in');
     SetTimer(fLoginTimeout,false);
   }
-
-  event ReceivedText( string Text )
-  {
-    // do nothing
-  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // State client in loggin in
 ///////////////////////////////////////////////////////////////////////////////
 state loggin_in {
-
-  // login timeout
-  event Timer()
-  {
-    SendLine(msg_login_timeout);
-    SendLine("");
-    Close();
-  }
-
   event ReceivedText( string Text )
   {
     local int c;
@@ -351,17 +281,9 @@ state loggin_in {
 
   event ReceivedBinary( int Count, byte B[255] )
   {
-    local string tmp;
-    local int i;
     if (count < 1) return;
     if (B[0] == 255) procTelnetControl(Count, B);
-    else {
-      for (i = 0; i < count; i++)
-      {
-        tmp = tmp$Chr(B[i]);
-      }
-      ReceivedText(tmp);
-    }
+    else super.ReceivedBinary(Count, B);
   }
 
   //---------------------------------------------------------------------------
@@ -411,7 +333,7 @@ state loggin_in {
         }
         if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
         {
-          SendLine(msg_login_noprivileges);
+          SendLine(msg_noprivileges);
           Close();
           return;
         }
@@ -597,34 +519,9 @@ state logged_in {
 
   event ReceivedBinary( int Count, byte B[255] )
   {
-    local string tmp;
-    local int i;
     if (count < 1) return;
-    if (B[0] == T_IAC) procTelnetControl(Count, B);
-    else {
-      for (i = 0; i < count; i++)
-      {
-        tmp = tmp$Chr(B[i]);
-      }
-      ReceivedText(tmp);
-    }
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// State steal_stdin, input is handled by an other command
-///////////////////////////////////////////////////////////////////////////////
-state steal_stdin extends logged_in {
-
-  event ReceivedText( string Text )
-  {
-    if (STDIN == none)
-    {
-      if (iVerbose > 1) log("[E] No STDIN handler, switching back", 'UTelAdSE');
-      gotostate('logged_in');
-      return;
-    }
-    STDIN.HandleInput(Text, self);
+    if (B[0] == 255) procTelnetControl(Count, B);
+    else super.ReceivedBinary(Count, B);
   }
 }
 
@@ -657,21 +554,13 @@ state auto_pager extends logged_in {
   }
 }
 
-
 //-----------------------------------------------------------------------------
-// Precess the input
+// Process the input
 //-----------------------------------------------------------------------------
 function procInput(string Text)
 {
-  local bool result;
   addHistory(Text);
-  switch (Left(Text, 1))
-  {
-    case PREFIX_SAY     : result = inConsole("say "$Mid(Text, 1)); break;
-    case PREFIX_BUILTIN : result = inBuiltin(Mid(Text, 1)); break;
-    default : result = inConsole(Text); 
-  }
-  if (result) SendPrompt();
+  super.procInput(Text);
 }
 
 //-----------------------------------------------------------------------------
@@ -726,171 +615,6 @@ function SendPrompt()
 }
 
 //-----------------------------------------------------------------------------
-// Try to logout Logout
-//-----------------------------------------------------------------------------
-function Logout()
-{
-  local int i, canlogout;
-  local array<string> messages;
-  for (i=0; i<Parent.TelnetHelpers.Length; i++)
-	{
-		Parent.TelnetHelpers[i].OnLogout(self, canlogout, messages);
-	}
-  if (canlogout != 0)
-  {
-    for (i = 0; i < messages.length; i++)
-    {
-      SendLine(messages[i]);
-    }
-    SendPrompt();
-  }
-  else {
-    SendLine(msg_goodbye);
-    SendLine("");
-    Close();
-  }
-}
-
-//-----------------------------------------------------------------------------
-// Execute builtin command
-//-----------------------------------------------------------------------------
-function Login()
-{
-  local int i;
-  for (i=0; i<Parent.TelnetHelpers.Length; i++)
-	{
-		Parent.TelnetHelpers[i].OnLogin(self);
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Make the text bold
-//-----------------------------------------------------------------------------
-function string Bold(string text)
-{
-  return class'UTelAdSEHelper'.static.Bold(text);
-}
-
-//-----------------------------------------------------------------------------
-// Make the text blink
-//-----------------------------------------------------------------------------
-function string Blink(string text)
-{
-  return class'UTelAdSEHelper'.static.Blink(text);
-}
-
-//-----------------------------------------------------------------------------
-// Make the text reverse video
-//-----------------------------------------------------------------------------
-function string Reverse(string text)
-{
-  return class'UTelAdSEHelper'.static.Reverse(text);
-}
-
-//-----------------------------------------------------------------------------
-// Clear the screen
-//-----------------------------------------------------------------------------
-function CLSR()
-{
-  SendText(Chr(27)$"[2J");
-}
-
-//-----------------------------------------------------------------------------
-// Move the cursor to a specified location
-//-----------------------------------------------------------------------------
-function MoveCursor(int top, int left)
-{
-  SendText(Chr(27)$"["$string(top)$";"$string(left)$"H");
-}
-
-//-----------------------------------------------------------------------------
-// Take over the handling of the input 
-//-----------------------------------------------------------------------------
-function captureSTDIN(UTelAdSEHelper handler)
-{
-  if (handler == none) return;
-  STDIN = handler;
-  gotostate('steal_stdin');
-  if (iVerbose > 1) log("[D] "$handler.name@"is taking over STDIN", 'UTelAdSE');
-}
-
-//-----------------------------------------------------------------------------
-// Return the STDIN to the connection
-//-----------------------------------------------------------------------------
-function releaseSTDIN()
-{
-  gotostate('logged_in');
-  STDIN = none;
-  if (iVerbose > 1) log("[D] STDIN released", 'UTelAdSE');
-}
-
-//-----------------------------------------------------------------------------
-// Execute a console command
-//-----------------------------------------------------------------------------
-function bool inConsole(string command)
-{
-  local string OutStr, args;
-  if (!Level.Game.AccessControl.CanPerform(Spectator, "Tc"))
-  {
-    SendLine(msg_login_noprivileges);
-    return true;
-  }
-  if (iVerbose > 1) log("[D] UTelAd console: "$command, 'UTelAdSE');
-  // add `name` to say
-  if (InStr(command, " ") > -1)
-  {
-    args = Mid(command, InStr(command, " ")+1);
-    command = Left(command, InStr(command, " "));
-    if (Caps(command) == "SAY") args = sUsername$": "$args;
-    command = command$" "$args;
-  }
-  if ((Caps(command) == "EXIT") || (Caps(command) == "QUIT"))
-  {
-    if (InStr(caps(args), "Y") == -1)
-    {
-      OutStr = msg_shutdownwarning;
-      ReplaceText(OutStr, "%s", command);
-      // show warning
-      SendLine(OutStr);
-      return true;
-    }
-  }
-  if (Spectator == none) {
-    OutStr = Level.ConsoleCommand(command);
-  }
-  else {
-    OutStr = Spectator.ConsoleCommand(command);
-  }
-  if (OutStr != "") SendLine(OutStr);
-  return true;
-}
-
-//-----------------------------------------------------------------------------
-// Execute builtin command
-//-----------------------------------------------------------------------------
-function bool inBuiltin(string command)
-{
-  local array< string > args;
-  local string temp;
-  local int hideprompt, i;
-  if (!Level.Game.AccessControl.CanPerform(Spectator, "Tb"))
-  {
-    SendLine(msg_login_noprivileges);
-    return true;
-  }
-  if (iVerbose > 1) log("[D] UTelAd buildin: "$command, 'UTelAdSE');
-  Divide(command, " ", command, temp);
-  class'wString'.static.Split2(temp, " ", args, true);
-  for (i=0; i<Parent.TelnetHelpers.Length; i++)
-	{
-		if (Parent.TelnetHelpers[i].ExecBuiltin(command, args, hideprompt, self))
-			return (hideprompt == 0); 
-	}
-  SendLine(msg_unknowncommand);
-  return true;
-}
-
-//-----------------------------------------------------------------------------
 // Handle short key
 //-----------------------------------------------------------------------------
 function bool inShortkey(int key)
@@ -898,7 +622,7 @@ function bool inShortkey(int key)
   local int hideprompt, i;
   if (!Level.Game.AccessControl.CanPerform(Spectator, "Th"))
   {
-    SendLine(msg_login_noprivileges);
+    SendLine(msg_noprivileges);
     return true;
   }
   if (iVerbose > 1) log("[D] UTelAd shortkey: "$key, 'UTelAdSE');
@@ -947,8 +671,7 @@ function bool DoTabComplete()
   temp = Mid(inputbuffer, 1);
   if (class'wString'.static.Split2(temp, " ", commandline) == 0)
   {
-    SendText(Chr(7)); // bell
-    return false;
+    commandline[0] = ""; // use empty line
   }
   options = new class'SortedStringArray';
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
@@ -1000,7 +723,7 @@ function printIssueMessage()
 }
 
 //-----------------------------------------------------------------------------
-// Print issue message
+// Setting
 //-----------------------------------------------------------------------------
 static function FillPlayInfo(PlayInfo PI)
 {
@@ -1026,12 +749,7 @@ defaultproperties
   msg_login_timeout="Login timeout"
   msg_login_toomanyretries="Too many tries, goodbye!"
   msg_login_error="Error during login."
-  msg_login_noprivileges="You do not have enough privileges."
   msg_login_welcome="There are %i clients logged in"
   msg_login_serverstatus="Server status:"
-  msg_unknowncommand="Unknown command"
-  msg_goodbye="Goodbye!"
-  msg_shutdownwarning="Warning, this will shutdown the server. To shutdown the server use: `%s yes`"
-
   msg_pager="-- Press any key to continue --"
 }

@@ -9,12 +9,14 @@ class UTelAdSE extends TcpLink config;
 
 const VERSION = "102";
 
-var globalconfig int ListenPort;
-var globalconfig int MaxConnections;
-var globalconfig array< class<UTelAdSEHelper> > TelnetHelperClasses;
+var string AppName;
+
+var config int ListenPort;
+var config int MaxConnections;
+var config array< class<UTelAdSEHelper> > TelnetHelperClasses;
 var array<UTelAdSEHelper> TelnetHelpers;
-var globalconfig bool CheckVersion;
-var globalconfig int iVerbose;
+var config bool CheckVersion;
+var config int iVerbose;
 
 var string VersionNotification;
 var int ConnectionCount;
@@ -23,7 +25,7 @@ var int ConnectionCount;
 event PreBeginPlay()
 {
   local UTelAdSEVersion versioncheck;
-  if (iVerbose > 0) log("[~] Loading UTelAdSE version "$VERSION, 'UTelAdSE');
+  if (iVerbose > 0) log("[~] Loading "$AppName$" version "$VERSION, 'UTelAdSE');
   if (iVerbose > 0) log("[~] Michiel 'El Muerte' Hendriks - elmuerte@drunksnipers.com", 'UTelAdSE');
   if (iVerbose > 0) log("[~] The Drunk Snipers - http://www.drunksnipers.com", 'UTelAdSE');
   if (CheckVersion)
@@ -37,7 +39,7 @@ event PreBeginPlay()
   ConnectionCount = 0;
   BindPort( ListenPort );
 	Listen();
-  if (iVerbose > 0) log("[~] UTelAdSE Listing on: "$ListenPort, 'UTelAdSE');
+  if (iVerbose > 0) log("[~] "$AppName$" Listing on: "$ListenPort, 'UTelAdSE');
 }
 
 // load TelnetHelpers for builtins/short-keys
@@ -88,14 +90,14 @@ function LoadTelnetHelpers()
 event GainedChild( Actor C )
 {
 	Super.GainedChild(C);
-  UTelAdSEConnection(C).Parent = self;
-  UTelAdSEConnection(C).iVerbose = iVerbose;
+  UTelAdSEAccept(C).Parent = self;
+  UTelAdSEAccept(C).iVerbose = iVerbose;
 	ConnectionCount++;
 
 	// if too many connections, close down listen.
 	if(MaxConnections > 0 && ConnectionCount > MaxConnections && LinkState == STATE_Listening)
 	{
-		if (iVerbose > 0) Log("[~] UTelAdSE: Too many connections - closing down Listen.");
+		if (iVerbose > 0) Log("[~] "$AppName$": Too many connections - closing down Listen.");
 		Close();
 	}
 }
@@ -109,7 +111,7 @@ event LostChild( Actor C )
 	// if closed due to too many connections, start listening again.
 	if(ConnectionCount <= MaxConnections && LinkState != STATE_Listening)
 	{
-		if (iVerbose > 0) Log("[~] UTelAdSE: Listening again - connections have been closed.", 'UTelAdSE');
+		if (iVerbose > 0) Log("[~] "$AppName$": Listening again - connections have been closed.", 'UTelAdSE');
 		Listen();
 	}
 }
@@ -117,7 +119,7 @@ event LostChild( Actor C )
 static function FillPlayInfo(PlayInfo PI)
 {
   PI.AddSetting("UTelAdSE", "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");
-  PI.AddSetting("UTelAdSE", "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;1:255");
+  PI.AddSetting("UTelAdSE", "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;0:255");
   PI.AddClass(class'UTelAdSEConnection');
   class'UTelAdSEConnection'.static.FillPlayInfo(PI);
 	PI.PopClass();
@@ -125,12 +127,13 @@ static function FillPlayInfo(PlayInfo PI)
 
 defaultproperties
 {
-     ListenPort=7776
-     MaxConnections=10
-     AcceptClass=Class'UTelAdSE.UTelAdSEConnection'
-     CheckVersion=true
-     iVerbose=1
-     TelnetHelperClasses(0)=class'UTelAdSE.DefaultBuiltins'
-     TelnetHelperClasses(1)=class'UTelAdSE.UserGroupAdmin'
-     TelnetHelperClasses(2)=class'UTelAdSE.ServerBuiltins'
+  AppName="UTelAdSE"
+  ListenPort=7776
+  MaxConnections=10
+  AcceptClass=Class'UTelAdSE.UTelAdSEConnection'
+  CheckVersion=true
+  iVerbose=1
+  TelnetHelperClasses(0)=class'UTelAdSE.DefaultBuiltins'
+  TelnetHelperClasses(1)=class'UTelAdSE.UserGroupAdmin'
+  TelnetHelperClasses(2)=class'UTelAdSE.ServerBuiltins'
 }

@@ -86,7 +86,7 @@ function bool Init()
   return true;
 }
 
-function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEAccept connection)
 {
   switch (command)
   {
@@ -103,7 +103,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
 
 // Map routines
 
-function RestartMap(UTelAdSEConnection connection)
+function RestartMap(UTelAdSEAccept connection)
 {
 	if (CanPerform(connection.Spectator, "Mr") || CanPerform(connection.Spectator, "Mc"))	  // Mr = MapRestart, Mc = Map Change
 	{
@@ -114,7 +114,7 @@ function RestartMap(UTelAdSEConnection connection)
   }
 }
 
-function DoSwitch( string URL, UTelAdSEConnection connection)
+function DoSwitch( string URL, UTelAdSEAccept connection)
 {
   local string mutators;
   local int i;
@@ -156,7 +156,7 @@ function DoSwitch( string URL, UTelAdSEConnection connection)
   }
 }
 
-function GotoNextMap(UTelAdSEConnection connection)
+function GotoNextMap(UTelAdSEAccept connection)
 {
   local string NextMap;
   local MapList MyList;
@@ -191,7 +191,7 @@ function GotoNextMap(UTelAdSEConnection connection)
 }
 
 
-function ExecMap(array< string > args, UTelAdSEConnection connection)
+function ExecMap(array< string > args, UTelAdSEAccept connection)
 {
   if (args.length == 0)
   {
@@ -264,7 +264,7 @@ function string FindMutator(string mut)
   }
 }
 
-function ExecMutator(array< string > args, UTelAdSEConnection connection)
+function ExecMutator(array< string > args, UTelAdSEAccept connection)
 {
   local int i, j, k;
   local string lastgroup, thisgroup;
@@ -350,7 +350,7 @@ function ExecMutator(array< string > args, UTelAdSEConnection connection)
 
 // Kick/ban routines
 
-exec function ExecKick(array< string > args, UTelAdSEConnection connection)
+exec function ExecKick(array< string > args, UTelAdSEAccept connection)
 {
   local string cmd;
   local array<PlayerReplicationInfo> AllPRI;
@@ -496,7 +496,7 @@ function MakeBotsList(out array<XUtil.PlayerRecord> BotList)
 	}
 }
 
-function ExecBots( array< string > args, UTelAdSEConnection connection)
+function ExecBots( array< string > args, UTelAdSEAccept connection)
 {
   local int MinV, i, j;
   local array<string> Params;
@@ -713,7 +713,7 @@ function array<string> RemoveMaps(array<string> MapMask, out MapList Maps)
 	return DelMaps;
 }
 
-function ExecMaplist( array< string > args, UTelAdSEConnection connection)
+function ExecMaplist( array< string > args, UTelAdSEAccept connection)
 {
   local MapList	Maps;
   local array<string> Values;
@@ -910,7 +910,7 @@ function string RenderValue(string value, string type, string data)
   else return value;
 }
 
-function ExecGametype( array< string > args, UTelAdSEConnection connection)
+function ExecGametype( array< string > args, UTelAdSEAccept connection)
 {
   local int i;
   local string UseGametype, cmd, temp;
@@ -994,7 +994,7 @@ function ExecGametype( array< string > args, UTelAdSEConnection connection)
 }
 
 // IP Policy settings
-function ExecIPPolicy( array< string > args, UTelAdSEConnection connection)
+function ExecIPPolicy( array< string > args, UTelAdSEAccept connection)
 {
   local string cmd, pol_ip, pol_pol;
   local int i;
@@ -1067,7 +1067,7 @@ function ExecIPPolicy( array< string > args, UTelAdSEConnection connection)
 }
 
 // IP Policy settings
-function ExecKeyPolicy( array< string > args, UTelAdSEConnection connection)
+function ExecKeyPolicy( array< string > args, UTelAdSEAccept connection)
 {
   local string cmd, pol_key, pol_name;
   local int i;

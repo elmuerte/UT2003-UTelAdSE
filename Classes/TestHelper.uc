@@ -15,7 +15,7 @@ function bool Init()
   return true;
 }
 
-function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEConnection connection)
+function bool ExecBuiltin(string command, array< string > args, out int hideprompt, UTelAdSEAccept connection)
 {
   switch (command)
   {
@@ -25,7 +25,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
   return false;
 }
 
-function stealSTDIN(array< string > args, UTelAdSEConnection connection)
+function stealSTDIN(array< string > args, UTelAdSEAccept connection)
 {
   connection.captureSTDIN(self);
   if (args.length > 0)
@@ -45,7 +45,7 @@ function stealSTDIN(array< string > args, UTelAdSEConnection connection)
   }
 }
 
-function colorTest(UTelAdSEConnection connection)
+function colorTest(UTelAdSEAccept connection)
 {
   local int i, j;
   local string tmp;
@@ -60,7 +60,7 @@ function colorTest(UTelAdSEConnection connection)
   }
 }
 
-function HandleInput(string Text, UTelAdSEConnection connection)
+function HandleInput(string Text, UTelAdSEAccept connection)
 {
   if (Asc(Left(Text,1)) == 3)
   {
@@ -94,7 +94,7 @@ function string maskWord(string word, string chars)
   return result;
 }
 
-function startHangman(UTelAdSEConnection connection)
+function startHangman(UTelAdSEAccept connection)
 {
   local string word;
   connection.CLSR();
@@ -111,7 +111,7 @@ function startHangman(UTelAdSEConnection connection)
   connection.SendLine("");
 }
 
-function playHangman(string Text, UTelAdSEConnection connection)
+function playHangman(string Text, UTelAdSEAccept connection)
 {
   local string char, guessedword, chars, word;
   local int wrongs, guesses;
@@ -158,7 +158,7 @@ function playHangman(string Text, UTelAdSEConnection connection)
   }
 }
 
-function drawHangman(UTelAdSEConnection connection, int guesses, int wrongs, string guessedword, string chars)
+function drawHangman(UTelAdSEAccept connection, int guesses, int wrongs, string guessedword, string chars)
 {
   local string tmp;
   connection.SendLine("     ______     ");

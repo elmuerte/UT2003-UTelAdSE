@@ -7,7 +7,7 @@
 
 class UTelAdSESpectator extends MessagingSpectator;
 
-var UTelAdSEConnection Server;
+var UTelAdSEAccept Server;
 var bool bMsgEnable;
 
 var localized string msg_shutdownwarning;
