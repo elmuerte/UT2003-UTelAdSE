@@ -49,20 +49,20 @@ state loggin_in {
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
         if (iVerbose > 0) Log("[~] TitanIRCd login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
-        SendRaw("464 ERR_PASSWDMISMATCH");
+        SendRaw("464 :Password incorrect");
         Close();
       }
       else {
         CurAdmin = Level.Game.AccessControl.GetLoggedAdmin(Spectator);
         if (CurAdmin == none)
         {
-          //FIXME: SendRaw(msg_login_error);
+          SendRaw("424 :Some error !?"); //ERR_FILEERROR
           Close();
           return;
         }
         if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
         {
-          //FIXME: SendRaw(msg_noprivileges);
+          SendRaw("481 :"$msg_noprivileges); //ERR_NOPRIVILEGES
           Close();
           return;
         }
@@ -77,28 +77,22 @@ state loggin_in {
         gotostate('logged_in'); 
         IRCSend(":Welcome to TitanIRCd"@sNickname, 001);
         IRCSend(":Your host is "$Parent.sIP$":"$string(parent.listenport)$", running TitanIRCd version"@IRCd.IRCVERSION, 002);
-        IRCSend(":This server was created on"@IRCd.sCreateTime, 003); //FIXME: create date
-        IRCSend("UTelAdSE/"$parent.VERSION$" TitanIRCd/"$IRCd.IRCVERSION$"", 004); //FIXME: version
-        // PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003
-        // ommited: WALLCHOPS MAXBANS=0 NICKLEN=-1 TOPICLEN=0 CHANMODES= KNOCK MODES=4
-        IRCSend("PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003 MAPPING=rfc1459 :are supported by this server", 005); //FIXME:
+        IRCSend(":This server was created on"@IRCd.sCreateTime, 003);
+        ircVERSION();
         IRCSend(":There are"@Level.Game.NumPlayers@"players and"@Level.Game.NumSpectators@"specators online", 251);
-        IRCSend(Level.Game.AccessControl.LoggedAdmins.Length@":Admins online", 252); // FIXME: 252
+        IRCSend(Level.Game.AccessControl.LoggedAdmins.Length@":Admins online", 252);
         // TODO: 254, channels formed
-        // TODO: 255, I have .. clients
+        IRCSend(":I have"@IRCd.IRCCLients.length@"clients", 255); 
         // TODO: 265, current local
         // TODO: 266, current global
         // TODO: 250, highest count
         printMOTD();
         if (parent.VersionNotification != "")
         {
-          // FIXME: in motd ?
-          //SendRaw("");
-          //SendRaw(bold(parent.VersionNotification));
+          IRCSend(bold(parent.VersionNotification));
         }
         Login();
-        SendRaw(":"$sUsername$" NICK "$sNickname); // force nick change
-        SendRaw(":"$sNickname$" MODE "$sNickname$" :+i");
+        if (sUsername != sNickname) SendRaw(":"$sUsername$" NICK "$sNickname);
         ircJoin(IRCd.sChatChannel);
         IRCd.AddUserPlayerList(sNickname, sUserhost, Spectator);
         Spectator.bMsgEnable = true;
@@ -120,6 +114,7 @@ state logged_in {
 function IRCSend(coerce string mesg, optional coerce string code, optional coerce string target)
 {
   local string tmp;
+
   if (target == "") target = sNickname;
   if (code == "") code = "NOTICE";
   tmp = ":"$Parent.sIP@code@target@mesg;
@@ -129,7 +124,7 @@ function IRCSend(coerce string mesg, optional coerce string code, optional coerc
 function SendLine(string line)
 {
   // send to admin channel
-  SendRaw(":"$sNickname$"!"$sUserhost@"PRIVMSG &"$sUsername@":"$line); // come from server
+  SendRaw(":"$Parent.sIP@"PRIVMSG &"$sUsername@":"$line); // come from server
 }
 
 function SendRaw(string line)
@@ -142,53 +137,82 @@ function procInput(string Text)
 {
   local string prefix;
   local array<string> input;
+
   log("Input["$id$"]:"@Text);
 
   if (class'wString'.static.split2(Text, " ", input) < 1) return;
   if (Left(input[0], 1) == ":") 
   {
-    // is prefixed
-    prefix = class'wArray'.static.ShiftS(input);
+    prefix = class'wArray'.static.ShiftS(input); // is prefixed
   }
   switch (caps(class'wArray'.static.ShiftS(input)))
   {
     case "PRIVMSG": ircPRIVMSG(input); break;
     case "PING": SendRaw("PONG "$input[0]); break;
     case "QUIT": ircQUIT(input); break;
+    case "VERSION": ircVERSION(); break;
+    case "NAMES": ircNAMES(class'wArray'.static.ShiftS(input)); break;
+    case "NOTICE":
+    case "MODE":
+    case "PART":
+    case "WHOIS":
   }
 }
 
 function ircTopic(string channel)
 {
+  local string tmp;
+  local Mutator M;
+
   if (channel == ("&"$sUsername))
   {
     IRCSend(channel$" :Enter your admin commands here", 332); // FIXME: topic
     IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
   }
   else {
-    IRCSend(channel$" :chat channel - talk to players here", 332); // FIXME: topic
+    for (M = Level.Game.BaseMutator.NextMutator; M != None; M = M.NextMutator) 
+    {
+      if (tmp != "") tmp = tmp$", ";
+      tmp = tmp$(M.GetHumanReadableName());
+    }
+    IRCSend(channel$" :"$Mid( string(Level.Game.Class), InStr(string(Level.Game.Class), ".")+1)@"-"@
+      Left(string(Level), InStr(string(Level), "."))@"-"@tmp, 332); // FIXME: topic
     IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
   }
 }
 
 function ircNames(string channel)
 {
+  local array<string> channels;
   local string names;
   local int i;
 
-  if (channel ~= ("&"$sUsername)) 
+  if (class'wString'.static.split2(channel, ",", channels) == 0)
   {
-    IRCSend("@"@channel$" :@"$sUsername, 353); // WTF is @ ??
-    IRCSend(channel$" :End of /NAMES list.", 366);
-    return; // private channel
+    channels[0] = IRCd.sChatChannel;
+    channels[1] = "&"$sUsername;
   }
 
-  for (i = 0; i < IRCd.IRCUsers.length; i++)
+  channel = class'wArray'.static.ShiftS(channels);
+  while (channel != "")
   {
-  	names = names$IRCd.IRCUsers[i].Flag$IRCd.IRCUsers[i].Nickname$" "; 
+    if (channel ~= ("&"$sUsername)) 
+    {
+      IRCSend("@"@channel$" :@"$sUsername, 353); // WTF is @ ??
+      IRCSend(channel$" :End of /NAMES list.", 366);
+    }
+
+    if (channel ~= IRCd.sChatChannel)
+    {
+      for (i = 0; i < IRCd.IRCUsers.length; i++)
+      {
+        names = names$IRCd.IRCUsers[i].Flag$IRCd.IRCUsers[i].Nickname$" "; 
+      }
+      IRCSend("@"@channel$" :"$names, 353); // WTF is @ ??
+      IRCSend(channel$" :End of /NAMES list.", 366);
+    }
+    channel = class'wArray'.static.ShiftS(channels);
   }
-  IRCSend("@"@channel$" :"$names, 353); // WTF is @ ??
-  IRCSend(channel$" :End of /NAMES list.", 366);
 }
 
 function ircJoin(string channel)
@@ -201,6 +225,7 @@ function ircJoin(string channel)
 function ircPRIVMSG(array<string> input)
 {
   local string text;
+
   if (input.length < 1) return;
   log("PRIVMSG from:"@input[0]);
   text = class'wArray'.static.ShiftS(input);
@@ -228,6 +253,14 @@ function ircQUIT(array<string> input)
   if (Left(input[0], 1) == ":") input[0] = Mid(input[0], 1); // remove leading :
   sQuitMsg = class'wArray'.static.join(input, " ");
   Close();
+}
+
+function ircVERSION()
+{
+  IRCSend("UTelAdSE/"$parent.VERSION$" TitanIRCd/"$IRCd.IRCVERSION$"", 004);
+  // PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003
+  // ommited: WALLCHOPS MAXBANS=0 NICKLEN=-1 TOPICLEN=0 CHANMODES= KNOCK MODES=4
+  IRCSend("PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 TOPICLEN=255 NETWORK=UT2003 MAPPING=rfc1459 :are supported by this server", 005);
 }
 
 ////////////////////////

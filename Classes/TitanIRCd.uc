@@ -7,7 +7,7 @@
 
 class TitanIRCd extends UTelAdSE config;
 
-const IRCVERSION = "101";
+const IRCVERSION = "100";
 
 var string sChatChannel;
 var string sCreateTime;
@@ -44,6 +44,7 @@ event GainedChild( Actor C )
 event LostChild( Actor C )
 {
   local int i;
+
   Super.LostChild(C);
   for (i = 0; i < IRCCLients.Length; i++)
   {
@@ -70,6 +71,7 @@ function CreatePlayerList()
 {
   local int i;
   local PlayerController P;
+
   if (iVerbose > 1) Log("[D] Creating Player List", 'UTelAdSE');
   IRCUsers.length = 0;
   foreach DynamicActors(class'PlayerController', P)
@@ -90,6 +92,8 @@ function CreatePlayerList()
 function int AddUserPlayerList(string nickname, string host, PlayerController P, optional bool invalid)
 {
   local int i, uid;
+
+  if (P == none) return -1;
   if (iVerbose > 1) Log("[D] Adding Player to Player List", 'UTelAdSE');
   i = IRCUsers.length;
   uid = i;
@@ -120,6 +124,8 @@ function RemoveUserPlayerList(PlayerController P, optional string msg)
 {
   local int i;
   local string tmp;
+
+  if (P == none) return;
   if (iVerbose > 1) Log("[D] Removing Player from Player List", 'UTelAdSE');
   for (i = 0; i < IRCUsers.length; i++)
   {
@@ -140,6 +146,7 @@ function string getNickName(string base, PlayerController P)
 {
   local int i, cnt;
   local string result;
+
   result = base;
   for (i = 0; i < IRCUsers.length; i++)
   {
@@ -158,6 +165,7 @@ function string getNickName(string base, PlayerController P)
 function string getPlayerHost(PlayerController P)
 {
   local string host;
+
   host = P.GetPlayerNetworkAddress();
   Left(host, InStr(host, ":"));
   if (host == "") host = "serverhost";
@@ -167,6 +175,7 @@ function string getPlayerHost(PlayerController P)
 function string fixName(string username)
 {
   local array<string> ichars, vchars;
+
   ichars[0] = "@";
   vchars[0] = "_";
   ichars[1] = " ";
