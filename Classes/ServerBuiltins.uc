@@ -58,6 +58,16 @@ var localized string msg_gametype_get;
 var localized string msg_gametype_seclevel;
 var localized string msg_gametype_update;
 
+var localized string msg_ip_policy;
+var localized string msg_ip_set;
+var localized string msg_ip_remove;
+var localized string msg_ip_nopolicy;
+
+var localized string msg_key_policy;
+var localized string msg_key_set;
+var localized string msg_key_remove;
+var localized string msg_key_nopolicy;
+
 var StringArray	AGameType;
 var StringArray	AMaplistType;
 var array<xUtil.MutatorRecord> AllMutators;
@@ -66,7 +76,7 @@ var StringArray AIncMutators;	// All Mutators currently in play
 
 function bool Init()
 {
-  log("[~] Loading Server Admin builtins"@VERSION);
+  log("[~] Loading Server Admin builtins"@VERSION, 'UTelAdSE');
   LoadGameTypes();
   LoadMutators();
   return true;
@@ -81,7 +91,9 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
     case "kick" :  ExecKick(args, connection); return true;
     case "maplist" :  ExecMaplist(args, connection); return true;
     case "mutator" :  ExecMutator(args, connection); return true;
-    case "gametype" :  ExecGametype(args, connection); return true;
+    case "gametype" : ExecGametype(args, connection); return true;
+    case "ippolicy" : ExecIPPolicy(args, connection); return true;
+    case "keypolicy" : ExecKeyPolicy(args, connection); return true;
   }
 }
 
@@ -804,7 +816,7 @@ function ExecMaplist( array< string > args, UTelAdSEConnection connection)
   }
 }
 
-// TODO: gametype
+// gametype
 
 function LoadGameTypes()
 {
@@ -969,6 +981,159 @@ function ExecGametype( array< string > args, UTelAdSEConnection connection)
   }
 }
 
+// IP Policy settings
+function ExecIPPolicy( array< string > args, UTelAdSEConnection connection)
+{
+  local string cmd, pol_ip, pol_pol;
+  local int i;
+ 
+  if (CanPerform(connection.Spectator, "Xb"))
+	{
+    cmd = ShiftArray(args);
+    if (cmd == "list")
+    {
+      for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+      {
+        divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
+        connection.SendLine(StrReplace(StrReplace(msg_ip_policy, "%s", pol_pol), "%i", pol_ip));
+      }
+    }
+    else if (cmd == "set")
+    {
+      if (args.length == 2)
+      {
+        if ((caps(args[1]) != "ACCEPT") && (caps(args[1]) != "DENY"))
+        {
+          connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
+          return;
+        }
+        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+        {
+          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
+          if (pol_ip == args[0])
+          {
+            level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$pol_ip;
+            connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", pol_ip));
+            return;
+          }
+        }
+        level.game.AccessControl.IPPolicies.length = level.game.AccessControl.IPPolicies.length+1;
+        level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$args[0];
+        connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", args[0]));
+      }
+      else {
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
+      }
+    }
+    else if (cmd == "remove")
+    {
+      if (args.length == 1)
+      {
+        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+        {
+          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
+          if (pol_ip == args[0])
+          {
+            level.game.AccessControl.IPPolicies.Remove(i, 1);
+            connection.SendLine(StrReplace(msg_ip_remove, "%i", pol_ip));
+            return;
+          }
+        }
+        connection.SendLine(msg_ip_nopolicy);
+      }
+      else {
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <remove> IP-mask");
+      }
+    }
+    else {
+      connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <list> | <set> IP-mask <accept|deny> | <remove> IP-mask");
+    }
+  }
+  else {
+    connection.SendLine(msg_noprivileges);
+  }
+}
+
+// IP Policy settings
+function ExecKeyPolicy( array< string > args, UTelAdSEConnection connection)
+{
+  local string cmd, pol_key, pol_pol;
+  local int i;
+ 
+  if (int(Level.EngineVersion) < 2153)
+  {
+    connection.SendLine("This feature is only available in UT2003 version 2153 and higher");
+    return;
+  }
+
+  if (CanPerform(connection.Spectator, "Xb"))
+	{
+    cmd = ShiftArray(args);
+    if (cmd == "list")
+    {
+      for (i = 0; i < level.game.AccessControl.BannedIDs.length; i++)
+      {
+        divide(level.game.AccessControl.BannedIDs[i], ",", pol_pol, pol_key);
+        connection.SendLine(StrReplace(StrReplace(msg_ip_policy, "%s", pol_pol), "%i", pol_key));
+      }
+    }
+    /*
+    else if (cmd == "set")
+    {
+      if (args.length == 2)
+      {
+        if ((caps(args[1]) != "ACCEPT") && (caps(args[1]) != "DENY"))
+        {
+          connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
+          return;
+        }
+        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+        {
+          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
+          if (pol_ip == args[0])
+          {
+            level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$pol_ip;
+            connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", pol_ip));
+            return;
+          }
+        }
+        level.game.AccessControl.IPPolicies.length = level.game.AccessControl.IPPolicies.length+1;
+        level.game.AccessControl.IPPolicies[i] = caps(args[1])$","$args[0];
+        connection.SendLine(StrReplace(StrReplace(msg_ip_set, "%s", args[1]), "%i", args[0]));
+      }
+      else {
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <set> IP-mask <accept|deny>");
+      }
+    }
+    else if (cmd == "remove")
+    {
+      if (args.length == 1)
+      {
+        for (i = 0; i < level.game.AccessControl.IPPolicies.length; i++)
+        {
+          divide(level.game.AccessControl.IPPolicies[i], ",", pol_pol, pol_ip);
+          if (pol_ip == args[0])
+          {
+            level.game.AccessControl.IPPolicies.Remove(i, 1);
+            connection.SendLine(StrReplace(msg_ip_remove, "%i", pol_ip));
+            return;
+          }
+        }
+        connection.SendLine(msg_ip_nopolicy);
+      }
+      else {
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"ippolicy <remove> IP-mask");
+      }
+    }*/
+    else {
+      connection.SendLine(msg_usage@PREFIX_BUILTIN$"keypolicy <list> | <set> Key-hash <accept|deny> | <remove> Key-hash");
+    }
+  }
+  else {
+    connection.SendLine(msg_noprivileges);
+  }
+}
+
 // Tab Completion
 function bool TabComplete(array<string> commandline, out SortedStringArray options)
 {
@@ -980,6 +1145,8 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
     if (InStr("maplist", commandline[0]) == 0) AddArray(options, "maplist");
     if (InStr("mutator", commandline[0]) == 0) AddArray(options, "mutator");
     if (InStr("gametype", commandline[0]) == 0) AddArray(options, "gametype");
+    if (InStr("ippolicy", commandline[0]) == 0) AddArray(options, "ippolicy");
+    if (InStr("keypolicy", commandline[0]) == 0) AddArray(options, "keypolicy");
   }
   else if (commandline.length == 2)
   {
@@ -1019,6 +1186,18 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
       if (InStr("list", commandline[1]) == 0) AddArray(options, commandline[0]@"list");
       if (InStr("get", commandline[1]) == 0) AddArray(options, commandline[0]@"get");
       if (InStr("set", commandline[1]) == 0) AddArray(options, commandline[0]@"set");
+    }
+    else if (commandline[0] == "ippolicy")
+    {
+      if (InStr("list", commandline[1]) == 0) AddArray(options, commandline[0]@"list");
+      if (InStr("set", commandline[1]) == 0) AddArray(options, commandline[0]@"set");
+      if (InStr("remove", commandline[1]) == 0) AddArray(options, commandline[0]@"remove");
+    }
+    else if (commandline[0] == "keypolicy")
+    {
+      if (InStr("list", commandline[1]) == 0) AddArray(options, commandline[0]@"list");
+      if (InStr("set", commandline[1]) == 0) AddArray(options, commandline[0]@"set");
+      if (InStr("remove", commandline[1]) == 0) AddArray(options, commandline[0]@"remove");
     }
   }
   return true;
@@ -1073,4 +1252,14 @@ defaultproperties
   msg_gametype_get="Sec.  Group    Setting"
   msg_gametype_seclevel="Required security level is %i, you only have %j"
   msg_gametype_update="Changed %s to %v"
+
+  msg_ip_policy="ip: %i policy: %s"
+  msg_ip_set="Set policy of %i to %s"
+  msg_ip_remove="Removed IP policy for %i"
+  msg_ip_nopolicy="There is no policy for that IP-mask"
+
+  msg_key_policy="CDKey hash: %i policy: %s"
+  msg_key_set="Set policy of %i to %s"
+  msg_key_remove="Removed CDKey Hash policy for %i"
+  msg_key_nopolicy="There is no policy for that CDKey hash"
 }

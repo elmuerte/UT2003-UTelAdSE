@@ -22,9 +22,9 @@ var int ConnectionCount;
 event PreBeginPlay()
 {
   local UTelAdSEVersion versioncheck;
-  log("[~] Loading UTelAdSE version "$VERSION);
-  log("[~] Michiel 'El Muerte' Hendriks - elmuerte@drunksnipers.com");
-  log("[~] The Drunk Snipers - http://www.drunksnipers.com");
+  log("[~] Loading UTelAdSE version "$VERSION, 'UTelAdSE');
+  log("[~] Michiel 'El Muerte' Hendriks - elmuerte@drunksnipers.com", 'UTelAdSE');
+  log("[~] The Drunk Snipers - http://www.drunksnipers.com", 'UTelAdSE');
   if (CheckVersion)
   {
     versioncheck = spawn(class'UTelAdSEVersion');
@@ -36,7 +36,7 @@ event PreBeginPlay()
   ConnectionCount = 0;
   BindPort( ListenPort );
 	Listen();
-  log("[~] UTelAdSE Listing on: "$ListenPort);
+  log("[~] UTelAdSE Listing on: "$ListenPort, 'UTelAdSE');
 }
 
 // load TelnetHelpers for builtins/short-keys
@@ -75,7 +75,7 @@ function LoadTelnetHelpers()
 					}
 					else
 					{
-						Log("TelnetHelper:"@THC@"could not be initialized");
+						Log("TelnetHelper:"@THC@"could not be initialized", 'UTelAdSE');
 					}
 				}
 			}
@@ -107,7 +107,7 @@ event LostChild( Actor C )
 	// if closed due to too many connections, start listening again.
 	if(ConnectionCount <= MaxConnections && LinkState != STATE_Listening)
 	{
-		Log("[~] UTelAdSE: Listening again - connections have been closed.");
+		Log("[~] UTelAdSE: Listening again - connections have been closed.", 'UTelAdSE');
 		Listen();
 	}
 }

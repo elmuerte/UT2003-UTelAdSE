@@ -15,7 +15,7 @@ var localized string msg_noplayers;
 
 function bool Init()
 {
-  log("[~] Loading default UTelAdSE builtins"@VERSION);
+  log("[~] Loading default UTelAdSE builtins"@VERSION, 'UTelAdSE');
   return true;
 }
 

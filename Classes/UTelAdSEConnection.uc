@@ -47,7 +47,7 @@ var localized string msg_unknowncommand;
 event Accepted()
 {
   local IpAddr addr;
-  if (DEBUG) log("[?] Creating UTelAdSE Spectator");
+  if (DEBUG) log("[?] Creating UTelAdSE Spectator", 'UTelAdSE');
 	Spectator = Spawn(class'UTelAdSESpectator');
 	if (Spectator != None) 
   {
@@ -236,16 +236,16 @@ function procInput(string Text)
       sUsername = Text;
       SendLine("Password: ");
       bEcho = false;
-      if (DEBUG) Log("[D] UTelAdSE got username: "$sUsername);
+      if (DEBUG) Log("[D] UTelAdSE got username: "$sUsername, 'UTelAdSE');
       if (sUsername == "") sUsername = Chr(127);
     }
     else {
       sPassword = Text;
       bEcho = true;
-      if (DEBUG) Log("[D] UTelAdSE got password: *hidden*");
+      if (DEBUG) Log("[D] UTelAdSE got password: *hidden*", 'UTelAdSE');
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
-        Log("[~] UTelAdSE login failed from: "$IpAddrToString(RemoteAddr));
+        Log("[~] UTelAdSE login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         SendLine("");
         SendLine(msg_login_incorrect);
         iLoginTries++;
@@ -282,7 +282,7 @@ function procInput(string Text)
         // succesfull login
         Session = new(None) class'UTelAdSESession';
         Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
-        Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr));
+        Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         bLoggedin = true;
         if (parent.VersionNotification != "")
         {
@@ -360,7 +360,7 @@ function bool inConsole(string command)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd console: "$command);
+  if (DEBUG) log("[D] UTelAd console: "$command, 'UTelAdSE');
   // add `name` to say
   if (InStr(command, " ") > -1)
   {
@@ -389,7 +389,7 @@ function bool inBuiltin(string command)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd buildin: "$command);
+  if (DEBUG) log("[D] UTelAd buildin: "$command, 'UTelAdSE');
   Divide(command, " ", command, temp);
   Split(temp, " ", args);
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
@@ -409,7 +409,7 @@ function bool inShortkey(int key)
     SendLine(msg_login_noprivileges);
     return true;
   }
-  if (DEBUG) log("[D] UTelAd shortkey: "$key);
+  if (DEBUG) log("[D] UTelAd shortkey: "$key, 'UTelAdSE');
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
 	{
 		if (Parent.TelnetHelpers[i].ExecShortKey(key, hideprompt, self))

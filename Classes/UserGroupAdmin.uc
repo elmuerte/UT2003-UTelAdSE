@@ -43,10 +43,10 @@ function bool Init()
 {
   if (Level.Game.AccessControl.IsA('AccessControlIni')) 
   {
-    log("[~] Loading User and Group Admin builtins"@VERSION);
+    log("[~] Loading User and Group Admin builtins"@VERSION, 'UTelAdSE');
     return true;
   }
-  log("[~] Not using XAdmin.AccessControlIni");
+  log("[~] Not using XAdmin.AccessControlIni", 'UTelAdSE');
   return false;
 }
 

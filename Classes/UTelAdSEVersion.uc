@@ -130,7 +130,7 @@ function setNotify()
 {
   if (sLatestVersion > UTelAdSE.version)
   {
-    log("Updated UTelAdSE found");
+    log("Updated UTelAdSE found", 'UTelAdSE');
     UTelAdSE.VersionNotification = "The latest version of UTelAdSE is:"@sLatestVersion$chr(13)$chr(10)$"Please notify the server admin to install the latest version."$chr(13)$chr(10)$sDownloadURL;
   }
 }
