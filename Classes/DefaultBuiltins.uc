@@ -9,7 +9,6 @@ class DefaultBuiltins extends UTelAdSEHelper;
 
 const VERSION = "102";
 
-var localized string msg_goodbye;
 var localized string msg_chat_nospectator;
 var localized string msg_chat_mode;
 var localized string msg_noplayers;
@@ -34,7 +33,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
 {
   switch (command)
   {
-    case "logout" : connection.SendLine(msg_goodbye$chr(13)$chr(10)); hideprompt = 1; connection.Logout(); return true;
+    case "logout" : hideprompt = 1; connection.Logout(); return true;
     case "togglechat" : ToggleChat(connection); return true;
     case "status" : SendStatus(connection); return true;
     case "players" : SendPlayers(connection); return true;
@@ -138,7 +137,6 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
 
 defaultproperties
 {
-  msg_goodbye="Goodbye!"
   msg_chat_nospectator="Error: No spectator"
   msg_chat_mode="Chat mode is now:"
   msg_noplayers="There are no players on the server"

@@ -56,6 +56,7 @@ var localized string msg_login_welcome;
 var localized string msg_login_serverstatus;
 var localized string msg_unknowncommand;
 var localized string msg_pager;
+var localized string msg_goodbye;
 
 // STDIN\STDOUT handlers
 var UTelAdSEHelper STDIN;
@@ -624,8 +625,13 @@ function Logout()
     {
       SendLine(messages[i]);
     }
+    SendPrompt();
   }
-  else Close();
+  else {
+    SendLine(msg_goodbye);
+    SendLine("");
+    Close();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -882,6 +888,7 @@ defaultproperties
   msg_login_welcome="There are %i clients logged in"
   msg_login_serverstatus="Server status:"
   msg_unknowncommand="Unknown command"
+  msg_goodbye="Goodbye!"
 
   msg_pager="-- Press any key to continue --"
 }

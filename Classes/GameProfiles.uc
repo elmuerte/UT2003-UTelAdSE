@@ -35,6 +35,8 @@ var localized string msg_switch_delay;
 
 var localized string msg_edit_already;
 var localized string msg_edit_notediting;
+var localized string msg_edit_start;
+var localized string msg_edit_logout;
 
 function bool Init()
 {
@@ -180,7 +182,7 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
     cmd = ShiftArray(args);
     if (cmd == "list")
     {
-      connection.SendLine(msg_list_id$Chr(9)$Chr(9)$msg_list_active$Chr(9)$msg_list_name);
+      connection.SendLine(msg_list_id$Chr(9)$msg_list_active$Chr(9)$Chr(9)$msg_list_name);
       for (i = 0; i < LadderRules.AllLadderProfiles.Count(); i++)
       {
         index = int(LadderRules.AllLadderProfiles.GetItem(i));
@@ -320,13 +322,12 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
         }
         else {
           index = LadderRules.FindActiveProfile();
-          // TODO: localize
-          cmd = msg_activeprofile;;
+          cmd = msg_activeprofile;
         }
         if (Index > -1 && Index < LadderRules.LadderProfiles.Length)
         {
-          connection.Session.SetValue("profile_editing", string(index));
-          //connection.SendLine(StrReplace(msg_edit_start, "%s", cmd));
+          connection.Session.SetValue("profile_editing", string(index), true);
+          connection.SendLine(StrReplace(msg_edit_start, "%s", cmd));
         }
         else {
           connection.SendLine(StrReplace(msg_nosuchprofile, "%s", cmd));
@@ -345,6 +346,7 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
 function execProfileEdit(array< string > args, UTelAdSEConnection connection)
 {
   local string cmd;
+  local int index;
   if (CanPerform(connection.Spectator, "Tg") && CanPerform(connection.Spectator, "Le"))
 	{
     if (connection.Session.GetValue("profile_editing") == "")
@@ -352,9 +354,23 @@ function execProfileEdit(array< string > args, UTelAdSEConnection connection)
       connection.SendLine(msg_edit_notediting);
       return;
     }
+    index = int(connection.Session.GetValue("profile_editing"));
     cmd = ShiftArray(args);
     if (cmd == "maps")
     {
+      cmd = ShiftArray(args);
+      if (cmd == "list")
+      {
+      }
+      else if (cmd == "add")
+      {
+      }
+      else if (cmd == "remove")
+      {
+      }
+      else {
+        connection.SendLine(msg_usage@PREFIX_BUILTIN$"pe <maps> [add|remove|list] maps ...");
+      }
     }
     else if (cmd == "mutators")
     {
@@ -364,12 +380,16 @@ function execProfileEdit(array< string > args, UTelAdSEConnection connection)
     }
     else if (cmd == "save")
     {
+      //
+      connection.Session.removeValue("profile_editing");
     }
     else if (cmd == "cancel")
     {
+      //
+      connection.Session.removeValue("profile_editing");
     }
     else {
-      connection.SendLine(msg_usage@PREFIX_BUILTIN$"pe <maps> [add|remove|list] maps ... | <mutators> [add|remove|list] maps ... | <set> setting value | <save> | <cancel>");
+      connection.SendLine(msg_usage@PREFIX_BUILTIN$"pe <maps> <list|add|remove> maps ... | <mutators> <list|add|remove> maps ... | <set> setting value | <save> | <cancel>");
     }
   }
   else {
@@ -405,12 +425,22 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
   return true;
 }
 
+function OnLogout(UTelAdSEConnection connection, out int canlogout, out array<string> messages)
+{
+  if (connection.Session.GetValue("profile_editing") != "")
+  {
+    canlogout=1;
+    messages[messages.length] = msg_edit_logout;
+    return;
+  }
+}
+
 defaultproperties
 {
   msg_norules="Ladder game rules not found, is ladder installed correctly ?"
   msg_list_id="id"
-  msg_list_name="active"
-  msg_list_active="name"
+  msg_list_name="name"
+  msg_list_active="active"
   msg_nosuchprofile="No such profile: %s"
   msg_activeprofile="Active profile"
 
@@ -430,4 +460,6 @@ defaultproperties
 
   msg_edit_already="Already editing a profile"
   msg_edit_notediting="Not editing a profile"
+  msg_edit_start="Editing profile: %s, use the /pe to edit"
+  msg_edit_logout="You are still editing a profile"
 }
