@@ -33,7 +33,7 @@ function string getPlayerHostByPRI(PlayerReplicationInfo PRI)
         IRCClient.IRCd.IRCUsers[i].Nickname = IRCClient.IRCd.getNickName(IRCClient.IRCd.IRCUsers[i].PC.PlayerReplicationInfo.PlayerName, IRCClient.IRCd.IRCUsers[i].PC);
         IRCClient.SendRaw(":"$old$" NICK "$IRCClient.IRCd.IRCUsers[i].Nickname);
       }
-      return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].Hostname;
+      return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].username$"@"$IRCClient.IRCd.IRCUsers[i].Hostname;
     }
   }
   foreach DynamicActors(class'PlayerController', P)
@@ -41,8 +41,8 @@ function string getPlayerHostByPRI(PlayerReplicationInfo PRI)
     if (P.PlayerReplicationInfo == PRI) break;
   }
   if (P == none) return "none!none@none";
-  i = IRCClient.IRCd.AddUserPlayerList("", "", P, true);
-  return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].Hostname;
+  i = IRCClient.IRCd.AddUserPlayerList("", "", "", P, true);
+  return IRCClient.IRCd.IRCUsers[i].Nickname$"!"$IRCClient.IRCd.IRCUsers[i].username$"@"$IRCClient.IRCd.IRCUsers[i].Hostname;
 }
 
 function PlayerController getPlayerByPRI(PlayerReplicationInfo PRI)
@@ -78,7 +78,7 @@ function TeamMessage( PlayerReplicationInfo PRI, coerce string S, name Type)
 
 event PreClientTravel()
 {
-  IRCClient.SendRaw(":"$IRCClient.IRCd.sName@"NOTICE &"$IRCClient.sUsername@":"$msg_shutdownwarning); // FIXME: notice
+  if (!IRCClient.IsInState('loggin_in')) IRCClient.SendRaw(":"$IRCClient.IRCd.sName@"NOTICE &"$IRCClient.sUsername@":"$msg_shutdownwarning);
 }
 
 function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )
@@ -101,4 +101,15 @@ function ReceiveLocalizedMessage( class<LocalMessage> Message, optional int Swit
       }
     }
   }
+}
+
+function InitPlayerReplicationInfo()
+{
+	Super.InitPlayerReplicationInfo();
+  PlayerReplicationInfo.PlayerName="TitanIRCd_User";
+}
+
+defaultproperties
+{
+  bMsgEnable=false
 }

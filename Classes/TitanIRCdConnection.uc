@@ -49,29 +49,30 @@ state loggin_in {
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
         if (iVerbose > 0) Log("[~] TitanIRCd login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
-        SendRaw("464 :Password incorrect");
+        SendRaw("464 : Incorrect login");
         Close();
       }
       else {
         CurAdmin = Level.Game.AccessControl.GetLoggedAdmin(Spectator);
         if (CurAdmin == none)
         {
-          SendRaw("424 :Some error !?"); //ERR_FILEERROR
+          SendRaw("424 : Some error !?"); //ERR_FILEERROR
           Close();
           return;
         }
         if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
         {
-          SendRaw("481 :"$msg_noprivileges); //ERR_NOPRIVILEGES
+          SendRaw("481 : "$msg_noprivileges); //ERR_NOPRIVILEGES
           Close();
           return;
         }
         if (spectator != none) {
           spectator.PlayerReplicationInfo.PlayerName = sUsername;
+          spectator.bMsgEnable = true;
         }
         // succesfull login
         sNickname = IRCd.getNickName(IRCd.fixName(sUsername), Spectator);
-        sUserhost = input[1]$"@"$Parent.IPAddrToIp(RemoteAddr);         
+        sUserhost = Parent.IPAddrToIp(RemoteAddr);         
 
         if (iVerbose > 0) Log("[~] TitanIRCd login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         gotostate('logged_in'); 
@@ -94,7 +95,7 @@ state loggin_in {
         Login();
         if (sUsername != sNickname) SendRaw(":"$sUsername$" NICK "$sNickname);
         ircJoin(IRCd.sChatChannel);
-        IRCd.AddUserPlayerList(sNickname, sUserhost, Spectator);
+        IRCd.AddUserPlayerList(sNickname, sUserhost, input[1], Spectator); // input[1] == username
         Spectator.bMsgEnable = true;
         ircJoin("&"$sUsername);
         return;
@@ -155,7 +156,9 @@ function procInput(string Text)
     case "NOTICE": break;
     case "MODE": break;
     case "PART": ircPART(class'wArray'.static.ShiftS(input)); break;
-    case "WHOIS": break;
+    case "WHOIS": ircWHOIS(input); break;
+    case "KICK": ircKICK(input); break;
+    case "BAN": ircBAN(input); break;
   }
 }
 
@@ -166,7 +169,7 @@ function ircTopic(string channel)
 
   if (channel == ("&"$sUsername))
   {
-    IRCSend(channel$" :Enter your admin commands here", 332); // FIXME: topic
+    IRCSend(channel$" :Admin channel - Enter your admin commands here", 332); // FIXME: topic
     IRCSend(channel$" "$IRCd.sName$" "$unixTimeStamp(), 333); 
   }
   else {
@@ -206,7 +209,7 @@ function ircNames(string channel)
     {
       for (i = 0; i < IRCd.IRCUsers.length; i++)
       {
-        names = names$IRCd.IRCUsers[i].Flag$IRCd.IRCUsers[i].Nickname$" "; 
+        names = names$IRCd.GetUserFlags(IRCd.IRCUsers[i].PC)$IRCd.IRCUsers[i].Nickname$" "; 
       }
       IRCSend("@"@channel$" :"$names, 353); // WTF is @ ??
       IRCSend(channel$" :End of /NAMES list.", 366);
@@ -267,6 +270,39 @@ function ircPART(string channel)
 {
   sendRaw(":"$IRCd.sName@"NOTICE"@sNickname@":You can not part channels");
   ircJoin(channel);
+}
+
+function ircWHOIS(array<string> input)
+{
+  local string whoisname;
+  local int i;
+  while (input.length > 0)
+  {
+    whoisname = class'wArray'.static.ShiftS(input);
+    for (i = 0; i < IRCd.IRCUsers.Length; i++)
+    {
+      if (class'wString'.static.MaskedCompare(IRCd.IRCUsers[i].nickname, whoisname))
+      {
+        whoisReply(IRCd.IRCUsers[i]);
+      }
+    }
+  }
+  IRCSend(":End of /WHOIS list", 318);
+}
+
+function whoisReply(TitanIRCd.IRCUser user)
+{
+  IRCSend(user.nickname@user.username@user.hostname@"* :user description here", 311);
+  IRCSend(user.nickname@IRCd.sName@":"@Level.Game.GameReplicationInfo.ServerName, 312);
+  if (user.PC.PlayerReplicationInfo.bAdmin) IRCSend(user.nickname@":is an administrator", 313);
+}
+
+function ircKICK(array<string> input)
+{
+}
+
+function ircBAN(array<string> input)
+{
 }
 
 ////////////////////////

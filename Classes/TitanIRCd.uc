@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    TitanIRCd.uc
-// version:     101
+// version:     102
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     IRC server running on the UTelAdSE system
 ///////////////////////////////////////////////////////////////////////////////
 
-class TitanIRCd extends UTelAdSE config;
+class TitanIRCd extends UTelAdSE config exportstructs;
 
-const IRCVERSION = "101";
+const IRCVERSION = "102";
 
 var string sName;
 var string sChatChannel;
@@ -17,8 +17,8 @@ var byte currentID;
 struct IRCUser
 {
   var string nickname;
+  var string username;
   var string hostname;
-  var string flag;
   var string oldname;
   var PlayerController PC;
 };
@@ -83,17 +83,13 @@ function CreatePlayerList()
     IRCUsers[i].nickname = getNickName(fixName(P.PlayerReplicationInfo.PlayerName), P);
     IRCUsers[i].hostname = getPlayerHost(P);
     IRCUsers[i].PC = P;
-    if (!P.PlayerReplicationInfo.bBot)
-    {
-      if (P.PlayerReplicationInfo.bAdmin) IRCUsers[i].Flag = "@";
-        else IRCUsers[i].Flag = "+";
-    }
   }
 }
 
-function int AddUserPlayerList(string nickname, string host, PlayerController P, optional bool invalid)
+function int AddUserPlayerList(string nickname, string host, string username, PlayerController P, optional bool invalid)
 {
   local int i, uid;
+  local string uFlags;
 
   if (P == none) return -1;
   if (iVerbose > 1) Log("[D] Adding Player to Player List", 'UTelAdSE');
@@ -104,23 +100,31 @@ function int AddUserPlayerList(string nickname, string host, PlayerController P,
   {
     nickname = getNickName(fixName(P.PlayerReplicationInfo.PlayerName), P);
     host = getPlayerHost(P);
+    username = Mid(P, InStr(P, ".")+1);
   }
   IRCUsers[i].nickname = nickname;
   IRCUsers[i].hostname = host;
+  IRCUsers[i].username = username;
   IRCUsers[i].PC = P;
   IRCUsers[i].oldname = P.PlayerReplicationInfo.PlayerName;
-  if (!P.PlayerReplicationInfo.bBot)
-  {
-    if (P.PlayerReplicationInfo.bAdmin) IRCUsers[i].Flag = "@";
-      else IRCUsers[i].Flag = "+";
-  }
   for (i = 0; i < IRCClients.length; i++)
   {
+    uFlags = GetUserFlags(P);
     IRCClients[i].SendRaw(":"$nickname$"!"$host@"JOIN"@sChatChannel);
-    if (IRCUsers[uid].Flag == "+") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+v"@nickname);
-    else if (IRCUsers[uid].Flag == "@") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+o"@nickname);
+    if (uFlags == "+") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+v"@nickname);
+    else if (uFlags == "@") IRCClients[i].SendRaw(":"$sName@"MODE"@sChatChannel@":+o"@nickname);
   }
   return uid;
+}
+
+function string GetUserFlags(PlayerController P)
+{
+  if (!P.PlayerReplicationInfo.bBot)
+  {
+    if (P.PlayerReplicationInfo.bAdmin) return "@";
+      else return "+";
+  }
+  return "";
 }
 
 function RemoveUserPlayerList(PlayerController P, optional string msg)
@@ -134,7 +138,7 @@ function RemoveUserPlayerList(PlayerController P, optional string msg)
   {
     if (IRCUsers[i].PC == P)
     {
-      tmp = ":"$IRCUsers[i].nickname$"!"$IRCUsers[i].hostname@"QUIT :"$msg;
+      tmp = ":"$IRCUsers[i].nickname$"!"$IRCUsers[i].username$"@"$IRCUsers[i].hostname@"QUIT :"$msg;
       IRCUsers.Remove(i, 1);
       break;
     }
@@ -172,7 +176,7 @@ function string getPlayerHost(PlayerController P)
   host = P.GetPlayerNetworkAddress();
   host = Left(host, InStr(host, ":"));
   if (host == "") host = "serverhost";
-  return Mid(P, InStr(P, ".")+1)$"@"$host;
+  return host;
 }
 
 function string fixName(string username)
