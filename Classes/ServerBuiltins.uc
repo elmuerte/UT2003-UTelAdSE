@@ -68,11 +68,11 @@ var localized string msg_key_set;
 var localized string msg_key_remove;
 var localized string msg_key_nopolicy;
 
-var StringArray	AGameType;
-var StringArray	AMaplistType;
-var array<xUtil.MutatorRecord> AllMutators;
-var StringArray AExcMutators;	// All available Mutators (Excluded)
-var StringArray AIncMutators;	// All Mutators currently in play
+var private StringArray AGameType;
+var private StringArray AMaplistType;
+var private array<xUtil.MutatorRecord> AllMutators;
+var private StringArray AExcMutators;	// All available Mutators (Excluded)
+var private StringArray AIncMutators;	// All Mutators currently in play
 
 function bool Init()
 {

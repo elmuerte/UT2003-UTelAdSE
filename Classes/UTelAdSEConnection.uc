@@ -21,27 +21,28 @@ var globalconfig bool bStartChat;
 var globalconfig float fLoginTimeout;
 var globalconfig float fInvalidLoginDelay;
 var globalconfig bool bEnablePager;
+var globalconfig bool bAnnounceLogin;
 
 var int iVerbose;
 
 var UTelAdSESpectator Spectator; // message spectator
 var UTelAdSE parent; // parent, used to reuse the TelnetHelpers
 var string sUsername;
-var string sPassword;
-var int iLoginTries;
+var private string sPassword;
+var private int iLoginTries;
 var string sIP; // server IP
 
-var array<string> history; // array with command history
-var int iHistOffset; // current offset in the history
+var private array<string> history; // array with command history
+var private int iHistOffset; // current offset in the history
 var string inputBuffer; 
 var bool bEcho; // echo the input characters
-var bool bEscapeCode; // working on an escape code
+var private bool bEscapeCode; // working on an escape code
 
-var int iLinesDisplayed; // used for the pager
+var private int iLinesDisplayed; // used for the pager
 var array<string> pagerBuffer; // pager buffer
 
 var bool bTelnetGotType, bTelnetGotSize;
-var float fTelnetNegotiation;
+var private float fTelnetNegotiation;
 
 var xAdminUser CurAdmin;
 var UTelAdSESession Session; // session per connection, can be used to keep variables in TelnetHandlers
@@ -57,7 +58,7 @@ var localized string msg_unknowncommand;
 var localized string msg_pager;
 
 // STDIN\STDOUT handlers
-var UTelAdSEHelper STDIN, STDOUT;
+var UTelAdSEHelper STDIN;
 
 event Accepted()
 {
@@ -301,7 +302,7 @@ state loggin_in {
           spectator.PlayerReplicationInfo.PlayerName = sUsername;
         }
         // succesfull login
-        Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
+        if (bAnnounceLogin) Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
         if (iVerbose > 0) Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
         if (parent.VersionNotification != "")
         {
@@ -779,6 +780,7 @@ defaultproperties
   fLoginTimeout=30.0
   fInvalidLoginDelay=5.0
   bEnablePager=true
+  bAnnounceLogin=true
 
   msg_login_incorrect="Login incorrect."
   msg_login_timeout="Login timeout"

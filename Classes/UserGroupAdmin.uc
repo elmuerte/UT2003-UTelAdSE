@@ -46,7 +46,7 @@ function bool Init()
     log("[~] Loading User and Group Admin builtins"@VERSION, 'UTelAdSE');
     return true;
   }
-  log("[~] Not using XAdmin.AccessControlIni", 'UTelAdSE');
+  log("[E] Not using XAdmin.AccessControlIni", 'UTelAdSE');
   return false;
 }
 

@@ -7,11 +7,12 @@
 
 class DefaultBuiltins extends UTelAdSEHelper;
 
-const VERSION = "101";
+const VERSION = "102";
 
 var localized string msg_chat_nospectator;
 var localized string msg_chat_mode;
 var localized string msg_noplayers;
+var localized string msg_pager_status;
 
 function bool Init()
 {
@@ -27,6 +28,7 @@ function bool ExecBuiltin(string command, array< string > args, out int hideprom
     case "togglechat" : ToggleChat(connection); return true;
     case "status" : SendStatus(connection); return true;
     case "players" : SendPlayers(connection); return true;
+    case "togglepager" : TogglePager(connection); return true;
   }
 }
 
@@ -60,6 +62,12 @@ function ToggleChat(UTelAdSEConnection connection)
   }
 }
 
+function TogglePager(UTelAdSEConnection connection)
+{
+  connection.bEnablePager = !connection.bEnablePager;
+  connection.SendLine(msg_pager_status@connection.bEnablePager);
+}
+
 function SendStatus(UTelAdSEConnection connection)
 {
   local string tmp;
@@ -69,7 +77,8 @@ function SendStatus(UTelAdSEConnection connection)
   connection.SendLine("| Current map: "$Chr(9)$Chr(9)$Left(string(Level), InStr(string(Level), ".")));
   for (M = Level.Game.BaseMutator.NextMutator; M != None; M = M.NextMutator) 
   {
-    tmp = tmp$(M.GetHumanReadableName())$", ";
+    if (tmp != "") tmp = tmp$", ";
+    tmp = tmp$(M.GetHumanReadableName());
   }
   connection.SendLine("| Mutators: "$Chr(9)$Chr(9)$tmp);
   connection.SendLine("| Number of players: "$Chr(9)$Level.Game.NumPlayers$" of "$Level.Game.MaxPlayers);
@@ -121,4 +130,5 @@ defaultproperties
   msg_chat_nospectator="Error: No spectator"
   msg_chat_mode="Chat mode is now:"
   msg_noplayers="There are no players on the server"
+  msg_pager_status="Pager enabled is:"
 }
