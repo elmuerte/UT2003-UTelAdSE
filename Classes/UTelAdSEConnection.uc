@@ -330,8 +330,8 @@ state loggin_in {
         inBuiltin("status");
         SendLine("");
         if (bStartChat) inBuiltin("togglechat");
-        SendPrompt();
         gotostate('logged_in');
+        SendPrompt();
         return;
       }
     }
@@ -520,6 +520,7 @@ state auto_pager extends logged_in {
     if (Left(Text, 1) == Chr(255)) return; // telnet commands ignore in this state
     if (Left(Text, 1) == Chr(27)) return; // ignore escaped chars
 
+    SendText(Chr(27)$"["$Len(msg_pager)$"D"$Chr(27)$"[K"$Chr(27)$"[1A"); // erase line
     for (i = 0; (pagerBuffer.Length > 0) && (i < int(session.getValue("TERM_HEIGHT", "9999"))); i++)
     {
       SendText(pagerBuffer[0]);
@@ -531,7 +532,7 @@ state auto_pager extends logged_in {
       SendPrompt();
     }
     else {
-      SendText(Chr(13)$Chr(10)$msg_pager);
+      SendText(Chr(13)$Chr(10)$Reverse(Blink(msg_pager)));
     }
   }
 }
@@ -583,7 +584,7 @@ function SendLine(string text)
       pagerBuffer[pagerBuffer.length-1] = Chr(13)$Chr(10)$text;
       if (!IsInState('auto_pager'))
       {
-        SendText(Chr(13)$Chr(10)$msg_pager);
+        SendText(Chr(13)$Chr(10)$Reverse(Blink(msg_pager)));
         if (iVerbose > 1) log("[D] enable pager", 'UTelAdSE');
         gotostate('auto_pager');
       }
@@ -608,9 +609,25 @@ function SendPrompt()
 //-----------------------------------------------------------------------------
 // Make the text bold
 //-----------------------------------------------------------------------------
-function string Bold(string text)
+function static string Bold(string text)
 {
   return Chr(27)$"[1m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Make the text blink
+//-----------------------------------------------------------------------------
+function static string Blink(string text)
+{
+  return Chr(27)$"[5m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Make the text reverse video
+//-----------------------------------------------------------------------------
+function static string Reverse(string text)
+{
+  return Chr(27)$"[7m"$text$Chr(27)$"[0m";
 }
 
 //-----------------------------------------------------------------------------

@@ -66,6 +66,10 @@ function bool viewProfile(int index, UTelAdSEConnection connection)
   local PlayInfo TempPI;
   local class<GameInfo> GIClass;
 	local class<AccessControl> ACClass;
+  local array< class<Mutator> > MClass;
+  local array<ProfileConfigSet.ProfileMutator> AllPCSMutators;
+  local array<ProfileConfigSet.ProfileMap> AllPCSMaps;
+  local class<Mutator> MutClass;
   local int i, n;
 
   TempPCS = LadderRules.LadderProfiles[Index];
@@ -88,20 +92,33 @@ function bool viewProfile(int index, UTelAdSEConnection connection)
       connection.SendLine("no AccessControl class");
       return true;
     }
+    AllPCSMutators = TempPCS.GetProfileMutators();
+    for (i=0; i < AllPCSMutators.Length; i++)
+		{
+			MutClass = class<Mutator>(DynamicLoadObject(AllPCSMutators[i].MutatorName, class'Class'));
+			if (MutClass != None)
+			{
+				MClass[MClass.Length] = MutClass;
+			}
+      // TODO: show error message
+			else log("ErrorRemoteMutator@TempStr");
+		}
 
+    // TODO: localize
     connection.SendLine("Profile:"@connection.Bold(LadderRules.Profiles[index].ProfileName));
     connection.SendLine("Gametype:"@string(GIClass));
     // game info
-    connection.SendLine(connection.Bold(Chr(9)$"Settings"));
+    // TODO: localize
+    connection.SendLine(connection.Reverse(Chr(9)$"Settings"));
     TempPI = new(None) class'PlayInfo';
   	GIClass.static.FillPlayInfo(TempPI);
 	  ACClass.static.FillPlayInfo(TempPI);
-
-    // TODO: query mutators
-  	//for (i=0;i<MClass.Length;i++)
-		//  MClass[i].static.FillPlayInfo(TempPI);
+    for (i=0;i<MClass.Length;i++) 
+    {
+      MClass[i].static.FillPlayInfo(TempPI);
+    }
     
-    for (i=0;i<TempPI.Settings.Length;i++)
+    for (i=0;i < TempPI.Settings.Length;i++)
     {
       n = TempPCS.GetParamIndex(TempPI.Settings[i].SettingName);
       if (n > -1)
@@ -111,10 +128,23 @@ function bool viewProfile(int index, UTelAdSEConnection connection)
     }
 
     // mutators
-    connection.SendLine(connection.Bold(Chr(9)$"Mutators"));
+    // TODO: localize
+    connection.SendLine(connection.Reverse(Chr(9)$"Mutators"));
+    connection.SendLine("Required"$Chr(9)$"Name");
+    for (i=0; i<AllPCSMutators.Length; i++)
+		{
+      connection.SendLine(AllPCSMutators[i].bRequired$Chr(9)$Chr(9)$AllPCSMutators[i].MutatorName);
+    }
 
     // maps
-    connection.SendLine(connection.Bold(Chr(9)$"Maps"));
+    AllPCSMaps = TempPCS.GetProfileMaps();
+    // TODO: localize
+    connection.SendLine(connection.Reverse(Chr(9)$"Maps"));
+    connection.SendLine("Order"$Chr(9)$"Required"$Chr(9)$"Name");
+    for (i=0;i<AllPCSMaps.Length;i++)
+    {
+	   connection.SendLine(AllPCSMaps[i].MapListOrder$Chr(9)$AllPCSMaps[i].bRequired$Chr(9)$Chr(9)$AllPCSMaps[i].MapName);
+    }
 
 
     return true;
@@ -166,6 +196,7 @@ function execProfiles(array< string > args, UTelAdSEConnection connection)
       }
       else {
         index = LadderRules.FindActiveProfile();
+        // TODO: localize
         cmd = "Active profile";
       }
       if (Index > -1 && Index < LadderRules.LadderProfiles.Length)
