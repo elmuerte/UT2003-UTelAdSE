@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    UserGroupAdmin.uc
-// version:     100
+// version:     101
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     Administration of users and groups (XAdmin.AccessControlIni)
 ///////////////////////////////////////////////////////////////////////////////
 
 class UserGroupAdmin extends UTelAdSEHelper;
 
-const VERSION = "100";
+const VERSION = "101";
 
 var localized string msg_admin_noadmins;
 var localized string msg_admin_usernames;
@@ -25,6 +25,12 @@ var localized string msg_admin_removedfromgroup;
 var localized string msg_admin_addedtomgroup;
 var localized string msg_admin_removedfrommgroup;
 var localized string msg_admin_updatedprivs;
+var localized string msg_admin_show_username;
+var localized string msg_admin_show_privileges;
+var localized string msg_admin_show_mergedprivileges;   
+var localized string msg_admin_show_level;
+var localized string msg_admin_show_ingroups;
+var localized string msg_admin_show_mangroups;
 
 var localized string msg_group_nogroups;
 var localized string msg_group_groups;
@@ -38,6 +44,11 @@ var localized string msg_group_exception;
 var localized string msg_group_removedgroup;
 var localized string msg_group_updatedseclevel;
 var localized string msg_group_updatedprivs;
+var localized string msg_group_show_name;
+var localized string msg_group_show_privs;
+var localized string msg_group_show_level;
+var localized string msg_group_show_users;
+var localized string msg_group_show_managers;
 
 function bool Init()
 {
@@ -214,23 +225,23 @@ function UserAdminShow(array< string > args, UTelAdSEConnection connection)
     User = xAdminUser(Users.GetItem(i));
     if (User.Username == args[0])
     {
-      connection.SendLine("| Username:           "$User.UserName);
-      connection.SendLine("| Privileges:         "$User.Privileges);
-      connection.SendLine("| Merged Privileges:  "$User.MergedPrivs);
-      connection.SendLine("| Max Security Level: "$User.MaxSecLevel());
+      connection.SendLine(strReplace(msg_admin_show_username, "%s", User.UserName));
+      connection.SendLine(strReplace(msg_admin_show_privileges, "%s", User.Privileges));
+      connection.SendLine(strReplace(msg_admin_show_mergedprivileges, "%s", User.MergedPrivs));
+      connection.SendLine(strReplace(msg_admin_show_level, "%s", User.MaxSecLevel()));
       for (i = 0; i < User.Groups.Count(); i++)
       {
         if (tmp != "") tmp = tmp$", ";
         tmp = tmp$User.Groups.Get(i).GroupName;
       }
-      connection.SendLine("| In groups:          "$tmp);
+      connection.SendLine(strReplace(msg_admin_show_ingroups, "%s", tmp));
       tmp = "";
       for (i = 0; i < User.ManagedGroups.Count(); i++)
       {
         if (tmp != "") tmp = tmp$", ";
         tmp = tmp$User.ManagedGroups.Get(i).GroupName;
       }
-      connection.SendLine("| Can manage groups:  "$tmp);
+      connection.SendLine(strReplace(msg_admin_show_mangroups, "%s", tmp));
       return;
     }
   }
@@ -560,22 +571,23 @@ function GroupAdminShow(array< string > args, UTelAdSEConnection connection)
   Group = Groups.FindByName(ShiftArray(args));
   if (Group != none)
   {
-    connection.SendLine("| Group nane:          "$Group.GroupName);
-    connection.SendLine("| Privileges:          "$Group.Privileges);
-    connection.SendLine("| Security Level:      "$Group.GameSecLevel);
+    
+    connection.SendLine(strReplace(msg_group_show_name, "%s", Group.GroupName));
+    connection.SendLine(strReplace(msg_group_show_privs, "%s", Group.Privileges));
+    connection.SendLine(strReplace(msg_group_show_level, "%s", Group.GameSecLevel));
     for (i = 0; i < Group.Users.Count(); i++)
     {
       if (tmp != "") tmp = tmp$", ";
       tmp = tmp$Group.Users.Get(i).UserName;
     }
-    connection.SendLine("| Users in this group: "$tmp);
+    connection.SendLine(strReplace(msg_group_show_users, "%s", tmp));
     tmp = "";
     for (i = 0; i < Group.Managers.Count(); i++)
     {
       if (tmp != "") tmp = tmp$", ";
       tmp = tmp$Group.Managers.Get(i).UserName;
     }
-    connection.SendLine("| Managers:            "$tmp);
+    connection.SendLine(strReplace(msg_group_show_managers, "%s", tmp));
     return;
     
   }
@@ -758,6 +770,12 @@ defaultproperties
   msg_admin_addedtomgroup="Added user as manager for group '%s'"
   msg_admin_removedfrommgroup="Removed user as manager for group '%s'"
   msg_admin_updatedprivs="Updated user privileges"
+  msg_admin_show_username="| Username:           %s"
+  msg_admin_show_privileges="| Privileges:         %s"
+  msg_admin_show_mergedprivileges="| Merged Privileges:  %s"
+  msg_admin_show_level="| Max Security Level: %s"
+  msg_admin_show_ingroups="| In groups:          %s"
+  msg_admin_show_mangroups="| Can manage groups:  %s"
 
   msg_group_nogroups="There are no groups to list"
   msg_group_groups="Groups:"
@@ -771,4 +789,9 @@ defaultproperties
   msg_group_removedgroup="Group '%s' was removed"
   msg_group_updatedseclevel="Updated group security level"
   msg_group_updatedprivs="Updated group privileges"
+  msg_group_show_name="| Group nane:          %s"
+  msg_group_show_privs="| Privileges:          %s"
+  msg_group_show_level="| Security Level:      %s"
+  msg_group_show_users="| Users in this group: %s"
+  msg_group_show_managers="| Managers:            %s"
 }

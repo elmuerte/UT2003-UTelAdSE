@@ -59,8 +59,7 @@ var localized string msg_pager;
 var localized string msg_goodbye;
 var localized string msg_shutdownwarning;
 
-// STDIN\STDOUT handlers
-var UTelAdSEHelper STDIN;
+var UTelAdSEHelper STDIN; // active STDIN handlers
 
 event Accepted()
 {
@@ -83,10 +82,14 @@ event Accepted()
   bEscapeCode = false;
 
   gotostate('telnet_control');
-
   LinkMode = MODE_Binary;
-  ReceiveMode = RMODE_Manual;
-  procTelnetControl(); // process telnet controlls
+  if (int(Level.EngineVersion) < 2175)
+  {
+    // ReceiveBinary is broken
+    if (iVerbose > 1) log("[D] Unreal engine version below 2175", 'UTelAdSE');
+    ReceiveMode = RMODE_Manual;
+  }
+  startTelnetControl(); // process telnet controlls
 }
 
 event Closed()
@@ -100,7 +103,7 @@ event Destroyed()
   if (IsConnected()) Close();
 }
 
-function procTelnetControl()
+function startTelnetControl()
 {
   // don't echo - server: WILL ECHO
   SendText(Chr(255)$Chr(251)$Chr(1));
@@ -127,30 +130,24 @@ function procTelnetControl()
 ///////////////////////////////////////////////////////////////////////////////
 state telnet_control {
 
-  // This is realy realy realy bad code
-  event Tick(float delta)
+  function procTelnetControl(int Count, byte B[255])
   {
-    local byte bCode[255];
-    local int i, j;
+    local int j;
     local string tmp;
 
-    fTelnetNegotiation += delta;
-
-    i = ReadBinary(255,bCode);
-    tmp = "";
-    for (j = 0; j < i; j++)
+    for (j = 0; j < Count; j++)
     {
-      if (bCode[j] == 255) // IAC
+      if (B[j] == 255) // IAC
       {
         j++;
-        if (bCode[j] == 250) // SB
+        if (B[j] == 250) // SB
         {
           j++;
-          switch (bCode[j])
+          switch (B[j])
           {
             case 31:  // term size
-                      session.setValue("TERM_WIDTH", string(bCode[j+1]*256+bCode[j+2]), true);
-                      session.setValue("TERM_HEIGHT", string(bCode[j+3]*256+bCode[j+4]), true);
+                      session.setValue("TERM_WIDTH", string(B[j+1]*256+B[j+2]), true);
+                      session.setValue("TERM_HEIGHT", string(B[j+3]*256+B[j+4]), true);
                       j = j+5;
                       bTelnetGotSize = true;
                       if (iVerbose > 1) log("[D] received term size:"@session.getValue("TERM_WIDTH")$"x"$session.getValue("TERM_HEIGHT"), 'UTelAdSE');
@@ -158,9 +155,9 @@ state telnet_control {
             case 24:  // term type
                       j += 2;
                       tmp = "";
-                      while (bCode[j] != 255) 
+                      while (B[j] != 255) 
                       {
-                        tmp = tmp$Chr(bCode[j]);
+                        tmp = tmp$Chr(B[j]);
                         j++;
                       }
                       j--;
@@ -185,6 +182,24 @@ state telnet_control {
       SetTimer(fLoginTimeout,false);
     }
   }
+
+  // This is realy realy realy bad code
+  event Tick(float delta)
+  {
+    local byte bCode[255];
+    local int i;
+
+    fTelnetNegotiation += delta;
+    if (int(Level.EngineVersion) >= 2175) return;
+    i = ReadBinary(255,bCode);
+    procTelnetControl(i, bCode);
+  }
+
+  event ReceivedBinary( int Count, byte B[255] )
+  {
+    procTelnetControl(count, B);
+  }
+    
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -123,7 +123,7 @@ function bool MaskedCompare(string target, string Mask)
 }
 
 // same as ReplaceText bu then returns the new string
-function string strReplace(string source, string change, string with)
+function string strReplace(coerce string source, coerce string change, coerce string with)
 {
   ReplaceText(source, change, with);
   return source;
