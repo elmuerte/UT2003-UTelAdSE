@@ -901,7 +901,7 @@ defaultproperties
   msg_login_serverstatus="Server status:"
   msg_unknowncommand="Unknown command"
   msg_goodbye="Goodbye!"
-  msg_shutdownwarning="Warning, this will shutdown the server. To shutdown the server use: `/%s yes`"
+  msg_shutdownwarning="Warning, this will shutdown the server. To shutdown the server use: `%s yes`"
 
   msg_pager="-- Press any key to continue --"
 }
