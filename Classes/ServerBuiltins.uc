@@ -1,13 +1,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    ServerBuiltins.uc.uc
-// version:     101
+// version:     102
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     functions to admin server settings
 ///////////////////////////////////////////////////////////////////////////////
 
 class ServerBuiltins extends UTelAdSEHelper;
 
-const VERSION = "101";
+const VERSION = "102";
 
 // Localization
 var localized string msg_onlyaccesscontrolini;

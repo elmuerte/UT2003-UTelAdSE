@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // filename:    UTelAdSEConnection.uc
-// version:     103
+// version:     104
 // author:      Michiel 'El Muerte' Hendriks <elmuerte@drunksnipers.com>
 // purpose:     The actual Telnet Admin client
 //              command prefixes:
@@ -34,6 +34,7 @@ var string inputBuffer;
 var bool bEcho; // echo the input characters
 var bool bEscapeCode; // working on an escape code
 var xAdminUser CurAdmin;
+var UTelAdSESession Session; // session per connection, can be used to keep variables in TelnetHandlers
 
 var localized string msg_login_incorrect;
 var localized string msg_login_toomanyretries;
@@ -84,13 +85,11 @@ event Accepted()
 
 event Closed()
 {
-  log("close event");
   Destroy();
 }
 
 event Destroyed()
 {
-  log("destroyed event");
   if (IsConnected()) Close();
 }
 
@@ -280,6 +279,8 @@ function procInput(string Text)
         if (spectator != none) {
           spectator.PlayerReplicationInfo.PlayerName = sUsername;
         }
+        // succesfull login
+        Session = new(None) class'UTelAdSESession';
         Level.Game.AccessControl.AdminEntered(Spectator, sUsername);
         Log("[~] UTelAdSE login succesfull from: "$IpAddrToString(RemoteAddr));
         bLoggedin = true;
