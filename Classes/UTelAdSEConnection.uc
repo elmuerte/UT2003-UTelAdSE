@@ -57,6 +57,7 @@ var localized string msg_login_serverstatus;
 var localized string msg_unknowncommand;
 var localized string msg_pager;
 var localized string msg_goodbye;
+var localized string msg_shutdownwarning;
 
 // STDIN\STDOUT handlers
 var UTelAdSEHelper STDIN;
@@ -727,6 +728,17 @@ function bool inConsole(string command)
     if (Caps(command) == "SAY") args = sUsername$": "$args;
     command = command$" "$args;
   }
+  if ((Caps(command) == "EXIT") || (Caps(command) == "QUIT"))
+  {
+    if (InStr(caps(args), "Y") == -1)
+    {
+      OutStr = msg_shutdownwarning;
+      ReplaceText(OutStr, "%s", command);
+      // show warning
+      SendLine(OutStr);
+      return true;
+    }
+  }
   if (Spectator == none) {
     OutStr = Level.ConsoleCommand(command);
   }
@@ -752,7 +764,7 @@ function bool inBuiltin(string command)
   }
   if (iVerbose > 1) log("[D] UTelAd buildin: "$command, 'UTelAdSE');
   Divide(command, " ", command, temp);
-  Split(temp, " ", args);
+  class'wString'.static.Split2(temp, " ", args, true);
   for (i=0; i<Parent.TelnetHelpers.Length; i++)
 	{
 		if (Parent.TelnetHelpers[i].ExecBuiltin(command, args, hideprompt, self))
@@ -817,7 +829,7 @@ function bool DoTabComplete()
     return false;
   }
   temp = Mid(inputbuffer, 1);
-  if (split(temp, " ", commandline) == 0)
+  if (class'wString'.static.Split2(temp, " ", commandline) == 0)
   {
     SendText(Chr(7)); // bell
     return false;
@@ -889,6 +901,7 @@ defaultproperties
   msg_login_serverstatus="Server status:"
   msg_unknowncommand="Unknown command"
   msg_goodbye="Goodbye!"
+  msg_shutdownwarning="Warning, this will shutdown the server. To shutdown the server use: `/%s yes`"
 
   msg_pager="-- Press any key to continue --"
 }
