@@ -881,12 +881,20 @@ function string SetGamePI(out PlayInfo GamePI, string GameType)
 		GamePI = new(None) class'PlayInfo';
 		GameClass.static.FillPlayInfo(GamePI);
 		Level.Game.AccessControl.FillPlayInfo(GamePI);
+    if (int(Level.EngineVersion) > 2153)
+    {
+      Level.Game.BaseMutator.MutatorFillPlayInfo(GamePI);
+    }
 	}
 	else if (GamePI.InfoClasses.Length>0 && GameClass != GamePI.InfoClasses[0])
 	{
 		GamePI.Clear();
 		GameClass.static.FillPlayInfo(GamePI);
 		Level.Game.AccessControl.FillPlayInfo(GamePI);
+    if (int(Level.EngineVersion) > 2153)
+    {
+      Level.Game.BaseMutator.MutatorFillPlayInfo(GamePI);
+    }
 	}
 
 	return string(GameClass);
@@ -943,7 +951,7 @@ function ExecGametype( array< string > args, UTelAdSEConnection connection)
     	{
         if (MaskedCompare(GamePI.Settings[i].SettingName, cmd))
         {                           // sec level                                                                                  // name                       // value (true value or datavalue ?)
-          connection.SendLine(Right("   "$GamePI.Settings[i].SecLevel,3)$") ["$Left(GamePI.Settings[i].Grouping$"      ", 6)$"]  "$GamePI.Settings[i].SettingName$" = "$RenderValue(GamePI.Settings[i].Value, GamePI.Settings[i].RenderType, GamePI.Settings[i].Data));
+          connection.SendLine(Right("   "$GamePI.Settings[i].SecLevel,3)$") ["$Left(GamePI.Settings[i].Grouping$"           ", 11)$"]  "$GamePI.Settings[i].SettingName$" = "$RenderValue(GamePI.Settings[i].Value, GamePI.Settings[i].RenderType, GamePI.Settings[i].Data));
         }
       }
     }
@@ -1251,7 +1259,7 @@ defaultproperties
 
   msg_gametype_unknown="Unknown gametype: %s"
   msg_gametype_list="Gametypes available on this server:"
-  msg_gametype_get="Sec.  Group    Setting"
+  msg_gametype_get="Sec.  Group         Setting"
   msg_gametype_seclevel="Required security level is %i, you only have %j"
   msg_gametype_update="Changed %s to %v"
 

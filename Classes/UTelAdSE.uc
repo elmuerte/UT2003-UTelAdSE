@@ -114,6 +114,15 @@ event LostChild( Actor C )
 	}
 }
 
+static function FillPlayInfo(PlayInfo PI)
+{
+  PI.AddSetting("UTelAdSE", "ListenPort", "Listen Port", 255, 1, "Text", "5;1:65535");
+  PI.AddSetting("UTelAdSE", "MaxConnections", "Maximum number of connections", 255, 2, "Text", "3;1:255");
+  PI.AddClass(class'UTelAdSEConnection');
+  class'UTelAdSEConnection'.static.FillPlayInfo(PI);
+	PI.PopClass();
+}
+
 defaultproperties
 {
      ListenPort=7776

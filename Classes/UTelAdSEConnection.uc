@@ -999,6 +999,18 @@ function printIssueMessage()
   SendLine("`------------------------------------------------------------");
 }
 
+//-----------------------------------------------------------------------------
+// Print issue message
+//-----------------------------------------------------------------------------
+static function FillPlayInfo(PlayInfo PI)
+{
+  PI.AddSetting("UTelAdSE", "bAnnounceLogin", "Announce login", 255, 3, "check");
+  PI.AddSetting("UTelAdSE", "bIssueMsg", "Show login banner", 255, 4, "check");
+  PI.AddSetting("UTelAdSE", "bStartChat", "Start in Chat mode", 255, 5, "check");
+  // call connection shit
+	PI.PopClass();
+}
+
 defaultproperties
 {
   bIssueMsg=true
