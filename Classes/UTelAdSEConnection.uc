@@ -50,6 +50,9 @@ var localized string msg_login_welcome;
 var localized string msg_login_serverstatus;
 var localized string msg_unknowncommand;
 
+// STDIN\STDOUT handlers
+var UTelAdSEHelper STDIN, STDOUT;
+
 event Accepted()
 {
   local IpAddr addr;
@@ -456,6 +459,23 @@ state logged_in {
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// State steal_stdin, input is handled by an other command
+///////////////////////////////////////////////////////////////////////////////
+state steal_stdin extends logged_in {
+
+  event ReceivedText( string Text )
+  {
+    if (STDIN == none)
+    {
+      if (iVerbose > 1) log("[E] No STDIN handler, switching back", 'UTelAdSE');
+      gotostate('logged_in');
+      return;
+    }
+    STDIN.HandleInput(Text, self);
+  }
+}
+
 //-----------------------------------------------------------------------------
 // Precess the input
 //-----------------------------------------------------------------------------
@@ -510,6 +530,27 @@ function SendPrompt()
 function string Bold(string text)
 {
   return Chr(27)$"[1m"$text$Chr(27)$"[0m";
+}
+
+//-----------------------------------------------------------------------------
+// Take over the handling of the input 
+//-----------------------------------------------------------------------------
+function captureSTDIN(UTelAdSEHelper handler)
+{
+  if (handler == none) return;
+  STDIN = handler;
+  gotostate('steal_stdin');
+  if (iVerbose > 1) log("[D] "$handler.name@"is taking over STDIN", 'UTelAdSE');
+}
+
+//-----------------------------------------------------------------------------
+// Return the STDIN to the connection
+//-----------------------------------------------------------------------------
+function releaseSTDIN()
+{
+  gotostate('logged_in');
+  STDIN = none;
+  if (iVerbose > 1) log("[D] STDIN released", 'UTelAdSE');
 }
 
 //-----------------------------------------------------------------------------

@@ -54,6 +54,12 @@ function bool TabComplete(array<string> commandline, out SortedStringArray optio
   return false;
 }
 
+// function:  Custom Input handler
+// input:     Text = received input
+//            connection = the connection to handle
+function HandleInput(string Text, UTelAdSEConnection connection)
+{
+}
 
 /*************************************************************
   General perpose functions, you don't have to overwrite these 
