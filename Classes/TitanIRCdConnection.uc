@@ -9,6 +9,7 @@ class TitanIRCdConnection extends UTelAdSEAccept config;
 
 var string sNickname;
 var string sUserhost;
+var string sQuitMsg;
 var TitanIRCd IRCd;
 var byte id;
 
@@ -17,6 +18,12 @@ event Accepted()
   if (IRCd.IRCUsers.length == 0) IRCd.CreatePlayerList(); // may wanna fix this
   super.Accepted();
   TitanIRCdSpectator(Spectator).IRCClient = self;
+}
+
+event Closed()
+{
+  IRCd.RemoveUserPlayerList(Spectator, sQuitMsg);
+  super.Closed();
 }
 
 state loggin_in {
@@ -42,20 +49,20 @@ state loggin_in {
       if (!Level.Game.AccessControl.AdminLogin(Spectator, sUsername, sPassword))
     	{
         if (iVerbose > 0) Log("[~] TitanIRCd login failed from: "$IpAddrToString(RemoteAddr), 'UTelAdSE');
-        SendLine("464 ERR_PASSWDMISMATCH");
+        SendRaw("464 ERR_PASSWDMISMATCH");
         Close();
       }
       else {
         CurAdmin = Level.Game.AccessControl.GetLoggedAdmin(Spectator);
         if (CurAdmin == none)
         {
-          //FIXME: SendLine(msg_login_error);
+          //FIXME: SendRaw(msg_login_error);
           Close();
           return;
         }
         if (!Level.Game.AccessControl.CanPerform(Spectator, "Tl"))
         {
-          //FIXME: SendLine(msg_noprivileges);
+          //FIXME: SendRaw(msg_noprivileges);
           Close();
           return;
         }
@@ -70,7 +77,7 @@ state loggin_in {
         gotostate('logged_in'); 
         IRCSend(":Welcome to TitanIRCd"@sNickname, 001);
         IRCSend(":Your host is "$Parent.sIP$":"$string(parent.listenport)$", running TitanIRCd version"@IRCd.IRCVERSION, 002);
-        IRCSend(":This server was created on FIXME", 003); //FIXME: create date
+        IRCSend(":This server was created on"@IRCd.sCreateTime, 003); //FIXME: create date
         IRCSend("UTelAdSE/"$parent.VERSION$" TitanIRCd/"$IRCd.IRCVERSION$"", 004); //FIXME: version
         // PREFIX=(ov)@+ CHANTYPES=#& MAXCHANNELS=2 NETWORK=UT2003
         // ommited: WALLCHOPS MAXBANS=0 NICKLEN=-1 TOPICLEN=0 CHANMODES= KNOCK MODES=4
@@ -86,15 +93,16 @@ state loggin_in {
         if (parent.VersionNotification != "")
         {
           // FIXME: in motd ?
-          //SendLine("");
-          //SendLine(bold(parent.VersionNotification));
+          //SendRaw("");
+          //SendRaw(bold(parent.VersionNotification));
         }
         Login();
-        SendLine(":"$sUsername$" NICK "$sNickname); // force nick change
-        SendLine(":"$sNickname$" MODE "$sNickname$" :+i");
+        SendRaw(":"$sUsername$" NICK "$sNickname); // force nick change
+        SendRaw(":"$sNickname$" MODE "$sNickname$" :+i");
         ircJoin(IRCd.sChatChannel);
         IRCd.AddUserPlayerList(sNickname, sUserhost, Spectator);
         Spectator.bMsgEnable = true;
+        ircJoin("&"$sUsername);
         return;
       }
     }
@@ -107,7 +115,6 @@ state logged_in {
     ReplaceText(Text, Chr(10), "");
     super.ReceivedText(Text);
   }
-
 }
 
 function IRCSend(coerce string mesg, optional coerce string code, optional coerce string target)
@@ -116,13 +123,19 @@ function IRCSend(coerce string mesg, optional coerce string code, optional coerc
   if (target == "") target = sNickname;
   if (code == "") code = "NOTICE";
   tmp = ":"$Parent.sIP@code@target@mesg;
-  SendLine(tmp);
+  SendRaw(tmp);
 }
 
 function SendLine(string line)
 {
+  // send to admin channel
+  SendRaw(":"$sNickname$"!"$sUserhost@"PRIVMSG &"$sUsername@":"$line); // come from server
+}
+
+function SendRaw(string line)
+{
   log("Output["$id$"]:"@line);
-  super.SendLine(line);
+  SendText(line$Chr(13)$Chr(10));
 }
 
 function procInput(string Text)
@@ -139,8 +152,9 @@ function procInput(string Text)
   }
   switch (caps(class'wArray'.static.ShiftS(input)))
   {
-    case "PRIVMSG": ircPRIVMSG(input, prefix); break;
-    case "PING": SendLine("PONG "$input[0]); break;
+    case "PRIVMSG": ircPRIVMSG(input); break;
+    case "PING": SendRaw("PONG "$input[0]); break;
+    case "QUIT": ircQUIT(input); break;
   }
 }
 
@@ -148,12 +162,12 @@ function ircTopic(string channel)
 {
   if (channel == ("&"$sUsername))
   {
-    IRCSend(channel$" :Enter here your admin commands", 332); // FIXME: topic
-    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); // FIXME: set by
+    IRCSend(channel$" :Enter your admin commands here", 332); // FIXME: topic
+    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
   }
   else {
     IRCSend(channel$" :chat channel - talk to players here", 332); // FIXME: topic
-    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); // FIXME: set by
+    IRCSend(channel$" "$Parent.sIP$" "$unixTimeStamp(), 333); 
   }
 }
 
@@ -162,7 +176,12 @@ function ircNames(string channel)
   local string names;
   local int i;
 
-  if (channel == ("&"$sUsername)) return; // private channel
+  if (channel ~= ("&"$sUsername)) 
+  {
+    IRCSend("@"@channel$" :@"$sUsername, 353); // WTF is @ ??
+    IRCSend(channel$" :End of /NAMES list.", 366);
+    return; // private channel
+  }
 
   for (i = 0; i < IRCd.IRCUsers.length; i++)
   {
@@ -174,30 +193,48 @@ function ircNames(string channel)
 
 function ircJoin(string channel)
 {
-  SendLine(":"$sNickname$"!"$sUserhost@"JOIN :"$channel);
+  SendRaw(":"$sNickname$"!"$sUserhost@"JOIN :"$channel);
   ircTopic(channel); 
   ircNames(channel); 
 }
 
-function ircPRIVMSG(array<string> input, string prefix)
+function ircPRIVMSG(array<string> input)
 {
-  if (class'wArray'.static.ShiftS(input) == IRCd.sChatChannel)
-  {
-    if (input.length == 0) return;
-    if (Left(input[0], 1) == ":") input[0] = Mid(input[0], 1); // remove leading :
+  local string text;
+  if (input.length < 1) return;
+  log("PRIVMSG from:"@input[0]);
+  text = class'wArray'.static.ShiftS(input);
+  if (Left(input[0], 1) == ":") input[0] = Mid(input[0], 1); // remove leading :
+  if (text ~= IRCd.sChatChannel)
+  {    
     Level.Game.Broadcast(Spectator, class'wArray'.static.join(input, " "), 'Say');
     return;
   }
-  else {
-    // execute commands
+  else if (text ~= ("&"$sUsername))
+  {
+    text = class'wArray'.static.join(input, " ");
+    switch (Left(Text, 1))
+    {
+      //case PREFIX_SAY     : result = inConsole("say "$Mid(Text, 1)); break;
+      case "." : inBuiltin(Mid(Text, 1)); break;
+      default : inConsole(Text); 
+    }
+    return;
   }
+}
+
+function ircQUIT(array<string> input)
+{
+  if (Left(input[0], 1) == ":") input[0] = Mid(input[0], 1); // remove leading :
+  sQuitMsg = class'wArray'.static.join(input, " ");
+  Close();
 }
 
 ////////////////////////
 
 function string unixTimeStamp()
 {
-  return "0";
+  return string(class'wTime'.static.mktime(Level.Year, Level.Month, Level.Day, Level.Hour, Level.Minute, Level.Second));
 }
 
 function printMOTD()
@@ -215,4 +252,5 @@ function printMOTD()
 defaultproperties
 {
   SpectatorClass=class'TitanIRCdSpectator'
+  sQuitMsg="Connection closed"
 }

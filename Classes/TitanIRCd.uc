@@ -10,6 +10,7 @@ class TitanIRCd extends UTelAdSE config;
 const IRCVERSION = "101";
 
 var string sChatChannel;
+var string sCreateTime;
 var byte currentID;
 
 struct IRCUser
@@ -26,6 +27,7 @@ var array<TitanIRCdConnection> IRCCLients;
 
 event PreBeginPlay()
 {
+  sCreateTime = class'wTime'.static.date("hh:nn:ss dd-mm-yyyy", Level.Year, Level.Month, Level.Day, Level.Hour, Level.Minute, Level.Second);
   Super.PreBeginPlay();
   sChatChannel = "#"$fixName(Level.Game.GameReplicationInfo.ShortName);
 }
@@ -107,11 +109,31 @@ function int AddUserPlayerList(string nickname, string host, PlayerController P,
   }
   for (i = 0; i < IRCClients.length; i++)
   {
-    IRCClients[i].SendLine(":"$nickname$"!"$host@"JOIN"@sChatChannel);
-    if (IRCUsers[uid].Flag == "+") IRCClients[i].SendLine(":"$sIP@"MODE"@sChatChannel@":+v"@nickname);
-    else if (IRCUsers[uid].Flag == "@") IRCClients[i].SendLine(":"$sIP@"MODE"@sChatChannel@":+o"@nickname);
+    IRCClients[i].SendRaw(":"$nickname$"!"$host@"JOIN"@sChatChannel);
+    if (IRCUsers[uid].Flag == "+") IRCClients[i].SendRaw(":"$sIP@"MODE"@sChatChannel@":+v"@nickname);
+    else if (IRCUsers[uid].Flag == "@") IRCClients[i].SendRaw(":"$sIP@"MODE"@sChatChannel@":+o"@nickname);
   }
   return uid;
+}
+
+function RemoveUserPlayerList(PlayerController P, optional string msg)
+{
+  local int i;
+  local string tmp;
+  if (iVerbose > 1) Log("[D] Removing Player from Player List", 'UTelAdSE');
+  for (i = 0; i < IRCUsers.length; i++)
+  {
+    if (IRCUsers[i].PC == P)
+    {
+      tmp = ":"$IRCUsers[i].nickname$"!"$IRCUsers[i].hostname@"QUIT :"$msg;
+      IRCUsers.Remove(i, 1);
+      break;
+    }
+  }
+  for (i = 0; i < IRCClients.length; i++)
+  {
+    if (tmp != "") IRCClients[i].SendRaw(tmp);
+  }
 }
 
 function string getNickName(string base, PlayerController P)
